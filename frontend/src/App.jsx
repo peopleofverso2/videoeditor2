@@ -1,10 +1,24 @@
 import React, { useState, useCallback } from 'react';
-import { Box } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box } from '@mui/material';
+import { createTheme } from '@mui/material/styles';
 import NodeEditor from './components/NodeEditor/NodeEditor';
 import Toolbar from './components/Toolbar/Toolbar';
 import PreviewModal from './components/Preview/PreviewModal';
 import { useNodesState, useEdgesState } from 'reactflow';
 import { exportProject, importProject } from './services/exportService';
+
+// Création du thème
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
 
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -35,7 +49,7 @@ export default function App() {
       present: { nodes, edges },
       future: []
     }));
-  }, [edges, nodes, onEdgesChange]);
+  }, [nodes, edges, onEdgesChange]);
 
   const handleUndo = useCallback(() => {
     if (history.past.length === 0) return;
@@ -103,34 +117,42 @@ export default function App() {
   }, [setPreviewOpen]);
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar
-        onSave={handleSave}
-        onImport={handleImport}
-        onPlay={handlePlay}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={history.past.length > 0}
-        canRedo={history.future.length > 0}
-      />
-      
-      <Box sx={{ flexGrow: 1 }}>
-        <NodeEditor
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        bgcolor: 'background.default' 
+      }}>
+        <Toolbar
+          onSave={handleSave}
+          onImport={handleImport}
+          onPlay={handlePlay}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={history.past.length > 0}
+          canRedo={history.future.length > 0}
+        />
+        
+        <Box sx={{ flexGrow: 1 }}>
+          <NodeEditor
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            setNodes={setNodes}
+            setEdges={setEdges}
+          />
+        </Box>
+
+        <PreviewModal
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
           nodes={nodes}
           edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
-          setNodes={setNodes}
-          setEdges={setEdges}
         />
       </Box>
-
-      <PreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        nodes={nodes}
-        edges={edges}
-      />
-    </Box>
+    </ThemeProvider>
   );
 }

@@ -5,10 +5,9 @@ const API_URL = 'http://localhost:4000';
 
 export async function exportProject(nodes, edges) {
   try {
-    // 1. Créer un nouveau ZIP
     const zip = new JSZip();
     
-    // 2. Ajouter le scénario (nodes et edges)
+    // Ajouter le scénario
     const scenario = {
       nodes,
       edges,
@@ -17,28 +16,31 @@ export async function exportProject(nodes, edges) {
     };
     zip.file('scenario.json', JSON.stringify(scenario, null, 2));
 
-    // 3. Récupérer et ajouter les médias
+    // Récupérer les médias
     const mediaFiles = nodes
       .filter(node => node.type === 'videoNode' && node.data.videoUrl)
       .map(node => node.data.videoUrl);
 
     for (const mediaUrl of mediaFiles) {
-      const filename = mediaUrl.split('/').pop();
-      const response = await fetch(`${API_URL}${mediaUrl}`);
-      const blob = await response.blob();
-      zip.file(`media/${filename}`, blob);
+      try {
+        const filename = mediaUrl.split('/').pop();
+        const response = await fetch(`${API_URL}${mediaUrl}`);
+        if (!response.ok) throw new Error(`Erreur lors de la récupération de ${filename}`);
+        const blob = await response.blob();
+        zip.file(`media/${filename}`, blob);
+      } catch (error) {
+        console.error('Erreur lors de la récupération du média:', error);
+      }
     }
 
-    // 4. Générer le fichier .pov
+    // Générer le zip
     const content = await zip.generateAsync({
       type: 'blob',
       compression: 'DEFLATE',
-      compressionOptions: {
-        level: 9
-      }
+      compressionOptions: { level: 9 }
     });
 
-    // 5. Sauvegarder le fichier
+    // Sauvegarder
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     saveAs(content, `project-${timestamp}.pov`);
 
@@ -51,52 +53,71 @@ export async function exportProject(nodes, edges) {
 
 export async function importProject(file) {
   try {
-    // 1. Lire le fichier .pov
+    console.log('Début de l\'import du projet:', file.name);
+    
+    // Lire le zip
     const zip = new JSZip();
     const content = await zip.loadAsync(file);
+    console.log('Fichier .pov chargé, contenu:', Object.keys(content.files));
 
-    // 2. Extraire le scénario
-    const scenarioJson = await content.file('scenario.json').async('string');
+    // Extraire le scénario
+    const scenarioFile = content.file('scenario.json');
+    if (!scenarioFile) {
+      throw new Error('Le fichier scenario.json est manquant dans le projet');
+    }
+    
+    const scenarioJson = await scenarioFile.async('string');
     const scenario = JSON.parse(scenarioJson);
+    console.log('Scénario chargé:', scenario);
 
-    // 3. Uploader les médias
+    // Uploader les médias
     const mediaFolder = content.folder('media');
     if (mediaFolder) {
       const mediaFiles = Object.keys(mediaFolder.files)
         .filter(path => !path.endsWith('/'));
+      console.log('Médias trouvés:', mediaFiles);
 
       for (const mediaPath of mediaFiles) {
-        const mediaBlob = await content.file(mediaPath).async('blob');
-        const formData = new FormData();
-        formData.append('file', mediaBlob, mediaPath.split('/').pop());
+        try {
+          const mediaBlob = await content.file(mediaPath).async('blob');
+          const formData = new FormData();
+          const filename = mediaPath.split('/').pop();
+          formData.append('file', mediaBlob, filename);
 
-        const response = await fetch(`${API_URL}/api/upload`, {
-          method: 'POST',
-          body: formData,
-        });
+          console.log('Upload du média:', filename);
+          const response = await fetch(`${API_URL}/api/upload`, {
+            method: 'POST',
+            body: formData,
+          });
 
-        if (!response.ok) {
-          throw new Error(`Erreur lors de l'upload de ${mediaPath}`);
-        }
-
-        const { path } = await response.json();
-
-        // Mettre à jour les chemins dans le scénario
-        scenario.nodes = scenario.nodes.map(node => {
-          if (node.type === 'videoNode' && node.data.videoUrl.includes(mediaPath.split('/').pop())) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                videoUrl: path,
-              },
-            };
+          if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Erreur lors de l'upload de ${filename}: ${error}`);
           }
-          return node;
-        });
+
+          const { path } = await response.json();
+          console.log('Média uploadé avec succès:', path);
+
+          // Mettre à jour les chemins dans le scénario
+          scenario.nodes = scenario.nodes.map(node => {
+            if (node.type === 'videoNode' && node.data.videoUrl.includes(mediaPath.split('/').pop())) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  videoUrl: path,
+                },
+              };
+            }
+            return node;
+          });
+        } catch (error) {
+          console.error(`Erreur lors de l'upload de ${mediaPath}:`, error);
+        }
       }
     }
 
+    console.log('Import terminé avec succès');
     return {
       nodes: scenario.nodes,
       edges: scenario.edges,

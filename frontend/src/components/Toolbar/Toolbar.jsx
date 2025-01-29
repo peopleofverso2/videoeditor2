@@ -1,135 +1,139 @@
 import React, { useRef } from 'react';
-import {
-  AppBar,
-  Toolbar as MuiToolbar,
-  IconButton,
+import { 
+  AppBar, 
+  Toolbar as MuiToolbar, 
+  IconButton, 
+  Typography,
+  Box,
   Button,
-  Tooltip,
-  Stack,
-  Divider,
+  Tooltip
 } from '@mui/material';
 import {
-  Save as SaveIcon,
-  Upload as UploadIcon,
   PlayArrow as PlayIcon,
+  Save as SaveIcon,
   Undo as UndoIcon,
   Redo as RedoIcon,
-  VideoCall as VideoIcon,
-  SmartButton as ButtonIcon,
+  Upload as UploadIcon,
+  VideoLibrary as VideoLibraryIcon,
+  SmartButton as ButtonIcon
 } from '@mui/icons-material';
 
 export default function Toolbar({ 
-  onSave,
-  onImport,
+  onSave, 
+  onImport, 
   onPlay,
   onUndo,
   onRedo,
   canUndo,
-  canRedo 
+  canRedo
 }) {
   const fileInputRef = useRef();
 
-  const onDragStart = (event, nodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current.click();
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file && file.name.endsWith('.pov')) {
-      onImport(file);
-    } else {
-      alert('Veuillez sélectionner un fichier .pov valide');
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await onImport(file);
+      event.target.value = ''; // Reset input
     }
-    event.target.value = null; // Reset pour permettre de sélectionner le même fichier
+  };
+
+  const handleDragStart = (event, type) => {
+    event.dataTransfer.setData('application/reactflow', type);
+    event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
     <AppBar position="static" color="default" elevation={1}>
-      <MuiToolbar variant="dense">
-        <Stack
-          direction="row"
-          spacing={2}
-          divider={<Divider orientation="vertical" flexItem />}
-          alignItems="center"
-        >
-          {/* Actions principales */}
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Sauvegarder le projet (.pov)">
-              <IconButton onClick={onSave}>
-                <SaveIcon />
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Importer un projet (.pov)">
-              <IconButton onClick={handleImportClick}>
-                <UploadIcon />
-              </IconButton>
-            </Tooltip>
+      <MuiToolbar>
+        <Typography variant="h6" component="div" sx={{ mr: 2 }}>
+          Video Editor
+        </Typography>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              accept=".pov"
-              onChange={handleFileChange}
-            />
-            
-            <Tooltip title="Lancer la prévisualisation">
-              <IconButton onClick={onPlay} color="primary">
-                <PlayIcon />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+        <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+          {/* Éléments glissables */}
+          <Button
+            variant="outlined"
+            startIcon={<VideoLibraryIcon />}
+            draggable
+            onDragStart={(e) => handleDragStart(e, 'videoNode')}
+          >
+            Vidéo
+          </Button>
 
-          {/* Undo/Redo */}
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Annuler">
-              <span>
-                <IconButton onClick={onUndo} disabled={!canUndo}>
-                  <UndoIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-            
-            <Tooltip title="Rétablir">
-              <span>
-                <IconButton onClick={onRedo} disabled={!canRedo}>
-                  <RedoIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
+          <Button
+            variant="outlined"
+            startIcon={<ButtonIcon />}
+            draggable
+            onDragStart={(e) => handleDragStart(e, 'buttonNode')}
+          >
+            Bouton
+          </Button>
+        </Box>
 
-          {/* Ajout de nœuds */}
-          <Stack direction="row" spacing={1}>
-            <Tooltip title="Ajouter une vidéo">
-              <Button
-                variant="outlined"
-                startIcon={<VideoIcon />}
-                draggable
-                onDragStart={(e) => onDragStart(e, 'videoNode')}
+        {/* Actions */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Annuler">
+            <span>
+              <IconButton 
+                onClick={onUndo} 
+                disabled={!canUndo}
+                size="large"
               >
-                VIDÉO
-              </Button>
-            </Tooltip>
-            
-            <Tooltip title="Ajouter un bouton">
-              <Button
-                variant="outlined"
-                startIcon={<ButtonIcon />}
-                draggable
-                onDragStart={(e) => onDragStart(e, 'buttonNode')}
+                <UndoIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Rétablir">
+            <span>
+              <IconButton 
+                onClick={onRedo} 
+                disabled={!canRedo}
+                size="large"
               >
-                BOUTON
-              </Button>
-            </Tooltip>
-          </Stack>
-        </Stack>
+                <RedoIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Sauvegarder">
+            <IconButton 
+              onClick={onSave}
+              color="primary"
+              size="large"
+            >
+              <SaveIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Importer">
+            <IconButton
+              onClick={() => fileInputRef.current?.click()}
+              color="primary"
+              size="large"
+            >
+              <UploadIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Lancer">
+            <IconButton
+              onClick={onPlay}
+              color="primary"
+              size="large"
+            >
+              <PlayIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".pov"
+          style={{ display: 'none' }}
+        />
       </MuiToolbar>
     </AppBar>
   );

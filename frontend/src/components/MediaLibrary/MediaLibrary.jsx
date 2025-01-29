@@ -32,7 +32,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
         throw new Error('Erreur lors de la récupération des vidéos');
       }
       const data = await response.json();
-      setVideos(data.videos || []);
+      setVideos(data || []); // Le backend renvoie directement le tableau
     } catch (error) {
       console.error('Error fetching videos:', error);
       setError('Erreur lors du chargement des vidéos');
@@ -51,8 +51,9 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
       setUploadProgress(0);
       setError(null);
 
+      const file = acceptedFiles[0];
       const formData = new FormData();
-      formData.append('video', acceptedFiles[0]);
+      formData.append('file', file);
 
       try {
         const response = await fetch('http://localhost:4000/api/media/upload', {
@@ -64,12 +65,12 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
           throw new Error('Erreur lors de l\'upload');
         }
 
-        const result = await response.json();
-        setVideos(prevVideos => [...prevVideos, result.file]);
+        const uploadedVideo = await response.json();
+        setVideos(prevVideos => [...prevVideos, uploadedVideo]);
         setUploadProgress(100);
       } catch (error) {
         console.error('Upload failed:', error);
-        setError('Erreur lors de l\'upload de la vidéo');
+        setError('Erreur lors de l\'upload');
       } finally {
         setUploading(false);
       }
@@ -79,9 +80,9 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'video/*': ['.mp4', '.webm', '.mov', '.avi']
+      'video/*': ['.mp4', '.webm', '.ogg', '.mov']
     },
-    maxSize: 500 * 1024 * 1024, // 500MB
+    multiple: false
   });
 
   const handleVideoSelect = (video) => {
@@ -157,7 +158,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
 
         <Grid container spacing={2}>
           {videos.map((video) => (
-            <Grid item xs={12} sm={6} md={4} key={video.id}>
+            <Grid item xs={12} sm={6} md={4} key={video.path}>
               <Card
                 sx={{
                   cursor: 'pointer',
@@ -170,24 +171,14 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
                 onClick={() => handleVideoSelect(video)}
               >
                 <CardMedia
-                  component="img"
-                  height="140"
-                  image={video.thumbnail || '/placeholder.jpg'}
-                  alt={video.name}
-                  sx={{
-                    objectFit: 'cover',
-                    bgcolor: 'action.hover',
-                  }}
+                  component="video"
+                  src={`http://localhost:4000${video.path}`}
+                  sx={{ height: 140 }}
                 />
                 <CardContent>
-                  <Typography variant="subtitle1" noWrap>
+                  <Typography variant="body2" noWrap>
                     {video.name}
                   </Typography>
-                  {video.metadata && (
-                    <Typography variant="caption" color="text.secondary">
-                      {Math.round(video.metadata.duration)}s • {video.metadata.width}x{video.metadata.height}
-                    </Typography>
-                  )}
                 </CardContent>
               </Card>
             </Grid>

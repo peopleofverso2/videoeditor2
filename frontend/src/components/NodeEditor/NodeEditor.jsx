@@ -25,15 +25,15 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
   const [contextMenu, setContextMenu] = useState(null);
 
   const onConnect = useCallback((params) => {
-    setEdges((eds) => [...eds, { ...params, animated: true }]);
+    const edge = {
+      ...params,
+      id: `e${params.source}-${params.target}`,
+      animated: true,
+    };
+    setEdges((eds) => [...eds, edge]);
   }, [setEdges]);
 
-  const onNodeDoubleClick = useCallback((event, node) => {
-    console.log('Edit node:', node);
-  }, []);
-
   const onNodeDragStop = useCallback((event, node) => {
-    console.log('Node moved:', node);
   }, []);
 
   const onDragOver = useCallback((event) => {
@@ -118,7 +118,6 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDoubleClick={onNodeDoubleClick}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         defaultViewport={defaultViewport}
