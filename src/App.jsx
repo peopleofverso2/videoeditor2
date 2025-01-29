@@ -1,153 +1,132 @@
-import React, { useState } from 'react';
-import { Box, Container, AppBar, Toolbar, Typography, Button } from '@mui/material';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import React, { useState, useCallback } from 'react';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton } from '@mui/material';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import NodeEditor from './components/NodeEditor';
+import Player from './components/Player';
+import { ReactFlowProvider } from 'reactflow';
+import 'reactflow/dist/style.css';
 
 function App() {
-  const [rushes, setRushes] = useState([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+  const [startNodeId, setStartNodeId] = useState(null);
+  const [isPlayMode, setIsPlayMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const handleRushUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const handleNodesChange = useCallback((changes) => {
+    setNodes(nds => changes);
+  }, []);
 
-    try {
-      setIsUploading(true);
-      console.log('Selected rush:', file);
+  const handleEdgesChange = useCallback((changes) => {
+    setEdges(eds => changes);
+  }, []);
 
-      // Vérifier le type de fichier
-      if (!file.type.startsWith('video/')) {
-        alert('Veuillez sélectionner un fichier vidéo');
-        return;
-      }
+  const handleSave = useCallback(() => {
+    const data = { nodes, edges, startNodeId };
+    localStorage.setItem('video-editor-state', JSON.stringify(data));
+  }, [nodes, edges, startNodeId]);
 
-      // Vérifier la taille du fichier (max 500MB pour les rushes)
-      const MAX_SIZE = 500 * 1024 * 1024; // 500MB
-      if (file.size > MAX_SIZE) {
-        alert('La taille du rush doit être inférieure à 500MB');
-        return;
-      }
-
-      // Créer un URL blob pour le rush
-      const url = URL.createObjectURL(file);
-      const newRush = {
-        id: Math.random().toString(36).substr(2, 9),
-        url,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        duration: 0, // On ajoutera la durée plus tard
-        lastModified: file.lastModified
-      };
-
-      setRushes(prev => [...prev, newRush]);
-
-    } catch (error) {
-      console.error('Error handling rush:', error);
-      alert('Erreur lors du chargement du rush. Veuillez réessayer.');
-    } finally {
-      setIsUploading(false);
-      event.target.value = '';
+  const handleLoad = useCallback(() => {
+    const savedData = localStorage.getItem('video-editor-state');
+    if (savedData) {
+      const { nodes: savedNodes, edges: savedEdges, startNodeId: savedStartId } = JSON.parse(savedData);
+      setNodes(savedNodes);
+      setEdges(savedEdges);
+      setStartNodeId(savedStartId);
     }
-  };
+  }, []);
+
+  const togglePlayMode = useCallback(() => {
+    if (!startNodeId && !isPlayMode) {
+      alert('Veuillez sélectionner un nœud de départ avant de passer en mode lecture');
+      return;
+    }
+    setIsPlayMode(!isPlayMode);
+  }, [isPlayMode, startNodeId]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <VideoLibraryIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Rushes Vidéo
-          </Typography>
-          <Button
-            variant="contained"
-            component="label"
-            disabled={isUploading}
-            sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
-          >
-            Ajouter un rush
-            <input
-              type="file"
-              hidden
-              accept="video/*"
-              onChange={handleRushUpload}
-            />
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Container sx={{ flexGrow: 1, py: 3 }}>
-        {rushes.length === 0 ? (
-          <Box
-            sx={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              color: 'text.secondary'
-            }}
-          >
-            <VideoLibraryIcon sx={{ fontSize: 60 }} />
-            <Typography variant="h6">
-              Aucun rush
+    <ReactFlowProvider>
+      <Box sx={{ 
+        flexGrow: 1,
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: isPlayMode ? '#000' : 'background.default'
+      }}>
+        <AppBar 
+          position="static" 
+          sx={{ 
+            bgcolor: isPlayMode ? 'transparent' : 'primary.main',
+            boxShadow: isPlayMode ? 'none' : undefined
+          }}
+        >
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              {isPlayMode ? '' : 'Éditeur de Vidéo Interactive'}
             </Typography>
-            <Typography variant="body2">
-              Cliquez sur "Ajouter un rush" pour commencer
-            </Typography>
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: 3
-            }}
-          >
-            {rushes.map(rush => (
-              <Box
-                key={rush.id}
-                sx={{
-                  position: 'relative',
-                  bgcolor: 'background.paper',
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  boxShadow: 1
-                }}
+            {!isPlayMode && (
+              <>
+                <Button color="inherit" onClick={handleSave}>
+                  Sauvegarder
+                </Button>
+                <Button color="inherit" onClick={handleLoad}>
+                  Charger
+                </Button>
+              </>
+            )}
+            <Button color="inherit" onClick={togglePlayMode}>
+              {isPlayMode ? 'Mode Édition' : 'Mode Lecture'}
+            </Button>
+            {isPlayMode && (
+              <IconButton 
+                color="inherit" 
+                onClick={toggleFullscreen}
+                sx={{ ml: 1 }}
               >
-                <Box
-                  sx={{
-                    position: 'relative',
-                    paddingTop: '56.25%', // 16:9
-                    bgcolor: 'black'
-                  }}
-                >
-                  <video
-                    src={rush.url}
-                    controls
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%'
-                    }}
-                  />
-                </Box>
-                <Box sx={{ p: 2 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                    {rush.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {(rush.size / (1024 * 1024)).toFixed(1)} MB
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
+                {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+              </IconButton>
+            )}
+          </Toolbar>
+        </AppBar>
+
+        <Box sx={{ 
+          flexGrow: 1,
+          p: isPlayMode ? 0 : 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Box sx={{ width: '100%', height: '100%' }}>
+            {isPlayMode ? (
+              <Player
+                nodes={nodes}
+                edges={edges}
+                startNodeId={startNodeId}
+              />
+            ) : (
+              <NodeEditor
+                initialNodes={nodes}
+                initialEdges={edges}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
+                onStartNodeSelect={setStartNodeId}
+              />
+            )}
           </Box>
-        )}
-      </Container>
-    </Box>
+        </Box>
+      </Box>
+    </ReactFlowProvider>
   );
 }
 

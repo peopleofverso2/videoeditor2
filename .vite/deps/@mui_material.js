@@ -40,6 +40,9 @@ import {
   withTheme
 } from "./chunk-ZX37LOL7.js";
 import {
+  require_react_dom
+} from "./chunk-YUNTBJI6.js";
+import {
   SvgIcon_default,
   capitalize_default,
   createChainedFunction_default,
@@ -207,9 +210,6 @@ import {
   useTimeout,
   visuallyHidden_default
 } from "./chunk-DNRIU5X3.js";
-import {
-  require_react_dom
-} from "./chunk-YUNTBJI6.js";
 import {
   __commonJS,
   __export,
