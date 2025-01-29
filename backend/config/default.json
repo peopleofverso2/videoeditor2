@@ -1,0 +1,5 @@
+{
+  "port": 4000,
+  "mongoURI": "mongodb://localhost:27017/video_editor",
+  "corsOrigin": "http://localhost:3000"
+}

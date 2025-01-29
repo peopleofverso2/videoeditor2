@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Button, Typography, IconButton } from '@mui/material';
+import { Box, IconButton, Typography } from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
@@ -27,10 +29,11 @@ function Player({ nodes, edges, startNodeId }) {
 
   const handleVideoEnd = useCallback(() => {
     const outgoingEdges = findOutgoingEdges(currentNodeId);
-    // S'il n'y a qu'un seul choix, passer automatiquement à la vidéo suivante
     if (outgoingEdges.length === 1) {
       setCurrentNodeId(outgoingEdges[0].target);
       setIsPlaying(true);
+    } else if (outgoingEdges.length > 1) {
+      setIsPlaying(false);
     }
   }, [currentNodeId, findOutgoingEdges]);
 
@@ -45,50 +48,34 @@ function Player({ nodes, edges, startNodeId }) {
     }
   }, [isPlaying]);
 
-  const handleFullscreenChange = () => {
-    if (!document.fullscreenElement) {
-      setIsFullscreen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  const enterFullscreen = async () => {
-    if (containerRef.current) {
+  const toggleFullscreen = useCallback(async () => {
+    if (!isFullscreen) {
       try {
-        if (containerRef.current.requestFullscreen) {
-          await containerRef.current.requestFullscreen();
-        } else if (containerRef.current.webkitRequestFullscreen) {
-          await containerRef.current.webkitRequestFullscreen();
-        } else if (containerRef.current.msRequestFullscreen) {
-          await containerRef.current.msRequestFullscreen();
-        }
+        await containerRef.current?.requestFullscreen();
         setIsFullscreen(true);
       } catch (err) {
-        console.error('Error attempting to enable fullscreen:', err);
+        console.error('Error entering fullscreen:', err);
       }
-    }
-  };
-
-  const exitFullscreen = async () => {
-    try {
-      if (document.exitFullscreen) {
+    } else {
+      try {
         await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        await document.msExitFullscreen();
+        setIsFullscreen(false);
+      } catch (err) {
+        console.error('Error exiting fullscreen:', err);
       }
-      setIsFullscreen(false);
-    } catch (err) {
-      console.error('Error attempting to disable fullscreen:', err);
     }
-  };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullscreen(false);
+      }
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     if (!currentNodeId) return;
@@ -96,117 +83,94 @@ function Player({ nodes, edges, startNodeId }) {
     const currentNode = findNodeById(currentNodeId);
     if (!currentNode) return;
 
-    // Si c'est un nœud vidéo avec des données
-    if (currentNode.type === 'videoNode' && currentNode.data.videoData) {
-      // Créer un nouveau Blob à partir des données
-      const blob = new Blob([currentNode.data.videoData], { type: currentNode.data.videoType });
-      const url = URL.createObjectURL(blob);
-      setVideoUrl(url);
-      
-      // Trouver les choix disponibles
+    if (currentNode.type === 'video' && currentNode.data?.videoUrl) {
+      setVideoUrl(currentNode.data.videoUrl);
       const outgoingEdges = findOutgoingEdges(currentNodeId);
-      const availableChoices = outgoingEdges.map(edge => {
-        const targetNode = findNodeById(edge.target);
-        return {
-          id: edge.target,
-          label: targetNode?.data?.label || 'Choix'
-        };
-      });
+      const nextNodes = outgoingEdges.map(edge => ({
+        id: edge.target,
+        node: findNodeById(edge.target)
+      })).filter(({ node }) => node);
       
-      setChoices(availableChoices);
-
-      // Nettoyer l'URL lors du changement de nœud
-      return () => {
-        URL.revokeObjectURL(url);
-      };
+      setChoices(nextNodes);
     }
   }, [currentNodeId, findNodeById, findOutgoingEdges]);
 
-  if (!startNodeId) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography>Veuillez sélectionner un nœud de départ</Typography>
-      </Box>
-    );
-  }
-
   return (
-    <Box 
+    <Box
       ref={containerRef}
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
+      sx={{
+        width: '100%',
+        height: '100%',
+        bgcolor: '#000',
+        display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center', 
-        gap: 2,
-        p: 2
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative'
       }}
     >
       {videoUrl && (
-        <Box 
-          sx={{ 
-            width: '100%', 
-            maxWidth: 800,
-            position: 'relative',
-            cursor: 'pointer',
-            '&:hover::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              transition: 'background-color 0.2s'
-            }
-          }}
-          onClick={togglePlayPause}
-        >
+        <>
           <video
             ref={videoRef}
             src={videoUrl}
-            autoPlay
-            style={{ 
-              width: '100%', 
-              height: 'auto',
-              backgroundColor: '#000',
-              display: 'block'
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto'
             }}
+            autoPlay={isPlaying}
             onEnded={handleVideoEnd}
-          >
-            Votre navigateur ne supporte pas la lecture de vidéos.
-          </video>
-          <IconButton 
-            sx={{ 
-              position: 'absolute', 
-              top: 10, 
-              right: 10, 
-              zIndex: 1 
+          />
+          
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              p: 2,
+              bgcolor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
             }}
-            onClick={isFullscreen ? exitFullscreen : enterFullscreen}
           >
-            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-          </IconButton>
-        </Box>
-      )}
+            <IconButton onClick={togglePlayPause} sx={{ color: 'white' }}>
+              {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+            </IconButton>
 
-      {choices.length > 1 && (
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
-          {choices.map(choice => (
-            <Button
-              key={choice.id}
-              variant="contained"
-              onClick={() => handleChoiceClick(choice.id)}
-            >
-              {choice.label}
-            </Button>
-          ))}
-        </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {choices.length > 1 && !isPlaying && (
+                choices.map(({ id, node }) => (
+                  <Box
+                    key={id}
+                    onClick={() => handleChoiceClick(id)}
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      bgcolor: 'primary.main',
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'primary.dark'
+                      }
+                    }}
+                  >
+                    <Typography variant="button" sx={{ color: 'white' }}>
+                      {node.data?.label || 'Next'}
+                    </Typography>
+                  </Box>
+                ))
+              )}
+            </Box>
+
+            <IconButton onClick={toggleFullscreen} sx={{ color: 'white' }}>
+              {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+            </IconButton>
+          </Box>
+        </>
       )}
     </Box>
   );

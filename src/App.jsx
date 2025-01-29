@@ -1,25 +1,86 @@
-import React, { useState, useCallback } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton } from '@mui/material';
+import React, { useState, useCallback, useRef } from 'react';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, Menu, MenuItem } from '@mui/material';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import UploadIcon from '@mui/icons-material/Upload';
 import NodeEditor from './components/NodeEditor';
 import Player from './components/Player';
 import { ReactFlowProvider } from 'reactflow';
+import { exportToPOVWithMedia, exportProjectWithMedia, importProjectFromZip } from './services/exportService';
 import 'reactflow/dist/style.css';
 
 function App() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
-  const [startNodeId, setStartNodeId] = useState(null);
   const [isPlayMode, setIsPlayMode] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [startNodeId, setStartNodeId] = useState(null);
+  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+  const fileInputRef = useRef(null);
 
-  const handleNodesChange = useCallback((changes) => {
-    setNodes(nds => changes);
+  const handleExportClick = (event) => {
+    setExportMenuAnchor(event.currentTarget);
+  };
+
+  const handleExportClose = () => {
+    setExportMenuAnchor(null);
+  };
+
+  const handleExportPOV = useCallback(() => {
+    handleExportClose();
+    exportToPOVWithMedia(nodes, edges)
+      .then(success => {
+        if (success) {
+          alert('Projet exporté avec succès au format POV avec les médias !');
+        } else {
+          alert('Échec de l\'export. Vérifiez la console pour plus de détails.');
+        }
+      });
+  }, [nodes, edges]);
+
+  const handleExportWithMedia = useCallback(() => {
+    handleExportClose();
+    exportProjectWithMedia(nodes, edges)
+      .then(success => {
+        if (success) {
+          alert('Projet exporté avec succès avec tous les fichiers médias !');
+        } else {
+          alert('Échec de l\'export. Vérifiez la console pour plus de détails.');
+        }
+      });
+  }, [nodes, edges]);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      try {
+        const { nodes: importedNodes, edges: importedEdges, startNodeId: importedStartId } = await importProjectFromZip(file);
+        setNodes(importedNodes);
+        setEdges(importedEdges);
+        setStartNodeId(importedStartId);
+        alert('Projet importé avec succès !');
+      } catch (error) {
+        console.error('Erreur d\'importation:', error);
+        alert('Échec de l\'importation. Vérifiez la console pour plus de détails.');
+      }
+    }
+    event.target.value = '';
+  };
+
+  const onNodesChange = useCallback((changes) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
   }, []);
 
-  const handleEdgesChange = useCallback((changes) => {
-    setEdges(eds => changes);
+  const onEdgesChange = useCallback((changes) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
+
+  const onConnect = useCallback((connection) => {
+    setEdges((eds) => addEdge(connection, eds));
   }, []);
 
   const handleSave = useCallback(() => {
@@ -48,68 +109,98 @@ function App() {
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   }, []);
 
   return (
-    <ReactFlowProvider>
-      <Box sx={{ 
-        flexGrow: 1,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: isPlayMode ? '#000' : 'background.default'
-      }}>
-        <Box sx={{ 
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          p: 1,
-          bgcolor: 'rgba(0, 47, 167, 0.95)',
-          color: 'white',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Typography variant="h6" sx={{ flexGrow: 1, pl: 2, textAlign: 'center' }}>
+    <Box sx={{ 
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      bgcolor: 'background.default'
+    }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Éditeur de Vidéo Interactive
           </Typography>
-        </Box>
+          <Button 
+            color="inherit"
+            onClick={handleSave}
+          >
+            Enregistrer
+          </Button>
+          <Button 
+            color="inherit"
+            onClick={handleLoad}
+          >
+            Charger
+          </Button>
+          <Button 
+            color="inherit"
+            onClick={handleImportClick}
+            startIcon={<UploadIcon />}
+          >
+            Importer
+          </Button>
+          <Button 
+            color="inherit" 
+            onClick={handleExportClick}
+            startIcon={<SaveAltIcon />}
+          >
+            Exporter
+          </Button>
+          <Menu
+            anchorEl={exportMenuAnchor}
+            open={Boolean(exportMenuAnchor)}
+            onClose={handleExportClose}
+          >
+            <MenuItem onClick={handleExportPOV}>Exporter en POV avec médias</MenuItem>
+            <MenuItem onClick={handleExportWithMedia}>Exporter avec tous les fichiers médias</MenuItem>
+          </Menu>
+          <Button 
+            color="inherit" 
+            onClick={togglePlayMode}
+          >
+            {isPlayMode ? 'Mode Édition' : 'Mode Lecture'}
+          </Button>
+          <IconButton 
+            color="inherit" 
+            onClick={toggleFullscreen}
+          >
+            <FullscreenIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
 
-        <Box sx={{ 
-          flexGrow: 1,
-          p: isPlayMode ? 0 : 2,
-          pt: isPlayMode ? 0 : 6,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Box sx={{ width: '100%', height: '100%' }}>
-            {isPlayMode ? (
-              <Player
-                nodes={nodes}
-                edges={edges}
-                startNodeId={startNodeId}
-              />
-            ) : (
-              <NodeEditor
-                initialNodes={nodes}
-                initialEdges={edges}
-                onNodesChange={handleNodesChange}
-                onEdgesChange={handleEdgesChange}
-                onStartNodeSelect={setStartNodeId}
-              />
-            )}
-          </Box>
-        </Box>
+      <Box sx={{ flex: 1, position: 'relative' }}>
+        {isPlayMode ? (
+          <Player nodes={nodes} edges={edges} startNodeId={startNodeId} />
+        ) : (
+          <ReactFlowProvider>
+            <NodeEditor
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              startNodeId={startNodeId}
+              setStartNodeId={setStartNodeId}
+            />
+          </ReactFlowProvider>
+        )}
       </Box>
-    </ReactFlowProvider>
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        accept=".zip"
+        onChange={handleFileImport}
+      />
+    </Box>
   );
 }
 

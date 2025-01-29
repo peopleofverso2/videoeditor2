@@ -47,26 +47,49 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--background-light);
 }
 
 .video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
-  padding: 24px;
+  gap: 1rem;
+  padding: 1rem;
 }
 
 .video-card {
-  background: var(--background-white);
+  background: white;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .video-card:hover {
   border-color: var(--primary-light);
   transform: translateY(-2px);
+}
+
+.video-card video {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.video-info {
+  padding: 1rem;
+}
+
+.video-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.video-description {
+  font-size: 0.9rem;
+  color: #666;
 }
 
 .empty-state {
@@ -111,6 +134,97 @@ body {
   position: absolute;
   width: 100%;
   height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* Styles pour React Flow */
+.react-flow {
+  background-color: var(--background-light);
+}
+
+.react-flow__node {
+  background-color: var(--background-white);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.react-flow__edge {
+  stroke: var(--primary-light);
+}
+
+.react-flow__edge-path {
+  stroke: var(--primary-light);
+}
+
+.react-flow__controls {
+  background-color: var(--background-white);
+  border-color: var(--border-color);
+}
+
+.react-flow__controls button {
+  background-color: var(--background-white);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.react-flow__controls button:hover {
+  background-color: var(--secondary-color);
+}
+
+/* Styles pour Material-UI */
+.MuiAppBar-root {
+  background-color: var(--background-white) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.MuiButton-root {
+  color: var(--text-primary) !important;
+}
+
+.MuiMenu-paper {
+  background-color: var(--background-white) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.MuiMenuItem-root {
+  color: var(--text-primary) !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: var(--secondary-color) !important;
+}
+
+.video-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: black;
+}
+
+.video-player video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.video-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  gap: 1rem;
+}
+
+.fullscreen-video {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
   top: 0;
   left: 0;
 }

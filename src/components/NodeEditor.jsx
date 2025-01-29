@@ -21,7 +21,7 @@ import ClickableNode from './nodes/ClickableNode';
 import ScenarioPlayer from './ScenarioPlayer';
 import 'reactflow/dist/style.css';
 
-// Define nodeTypes outside of component to prevent unnecessary re-renders
+// Définir les types de nœuds personnalisés
 const NODE_TYPES = {
   videoNode: VideoNode,
   videoInteractiveNode: VideoInteractiveNode,
