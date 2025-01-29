@@ -1,190 +1,380 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  IconButton,
-  Box,
-  Button,
-} from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
-import ReactPlayer from 'react-player';
+import React, { useState, useRef, useEffect } from 'react';
+import { Modal, Button, Tooltip, IconButton } from '@mui/material';
+import { Close, Fullscreen, FullscreenExit, PlayArrow, Pause, Help } from '@mui/icons-material';
 
 const API_URL = 'http://localhost:4000';
 
 const getFullUrl = (path) => {
-  if (!path) return null;
-  return path.startsWith('http') ? path : `${API_URL}${path}`;
-};
-
-const STYLES = {
-  solid: {
-    variant: 'contained',
-    style: {},
-  },
-  outline: {
-    variant: 'outlined',
-    style: {},
-  },
-  gradient: {
-    variant: 'contained',
-    style: {
-      background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)',
-    },
-  },
+  if (!path) return '';
+  return path.startsWith('http') ? path : `http://localhost:4000${path}`;
 };
 
 export default function PreviewModal({ open, onClose, nodes, edges }) {
   const [currentNode, setCurrentNode] = useState(null);
-  const [videoEnded, setVideoEnded] = useState(false);
-  const [nextNodes, setNextNodes] = useState([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
+  const videoRef = useRef(null);
+  const modalRef = useRef(null);
 
   useEffect(() => {
     if (open) {
       const startNode = nodes.find(node => !edges.some(edge => edge.target === node.id));
       setCurrentNode(startNode);
-      setVideoEnded(false);
       setIsPlaying(true);
     }
   }, [open, nodes, edges]);
 
+  // Gestionnaire des raccourcis clavier
   useEffect(() => {
-    if (currentNode) {
-      const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
-      const nextNodeIds = outgoingEdges.map(edge => edge.target);
-      const nextNodesList = nodes.filter(node => nextNodeIds.includes(node.id));
-      setNextNodes(nextNodesList);
+    const handleKeyPress = (e) => {
+      if (!open) return;
 
-      if (videoEnded && nextNodesList.length === 1 && nextNodesList[0].type === 'videoNode') {
-        setCurrentNode(nextNodesList[0]);
-        setVideoEnded(false);
-        setIsPlaying(true);
+      switch (e.key.toLowerCase()) {
+        case ' ':  // Espace
+        case 'k':  // YouTube style
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'f':  // Plein écran
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case 'escape':  // Quitter le plein écran
+          if (isFullscreen) {
+            document.exitFullscreen();
+            setIsFullscreen(false);
+          }
+          break;
+        case 'arrowright':  // Avancer de 5 secondes
+          if (videoRef.current) {
+            videoRef.current.currentTime += 5;
+          }
+          break;
+        case 'arrowleft':  // Reculer de 5 secondes
+          if (videoRef.current) {
+            videoRef.current.currentTime -= 5;
+          }
+          break;
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+          // Sélectionner un choix par numéro
+          if (currentNode?.type === 'buttonNode') {
+            const choices = edges.filter(edge => edge.source === currentNode.id);
+            const choiceIndex = parseInt(e.key) - 1;
+            if (choiceIndex < choices.length) {
+              const targetNode = nodes.find(n => n.id === choices[choiceIndex].target);
+              if (targetNode) {
+                handleNodeClick(targetNode);
+              }
+            }
+          }
+          break;
+        case 'h':
+          setShowHelp(!showHelp);
+          break;
       }
-    }
-  }, [currentNode, videoEnded, edges, nodes]);
-
-  const handleVideoEnd = () => {
-    setVideoEnded(true);
-    setIsPlaying(false);
-  };
-
-  const getButtonStyle = (nodeStyle = {}) => {
-    const style = STYLES[nodeStyle.variant || 'solid'];
-    return {
-      variant: style.variant,
-      sx: {
-        px: 4,
-        py: 2,
-        fontSize: nodeStyle.fontSize || '1.1rem',
-        fontWeight: 500,
-        minWidth: '200px',
-        transition: 'all 0.2s ease',
-        backgroundColor: nodeStyle.color,
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          backgroundColor: nodeStyle.color ? `${nodeStyle.color}dd` : undefined,
-        },
-        ...style.style,
-      },
     };
-  };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [open, isFullscreen, currentNode, edges, nodes]);
 
   const handleNodeClick = (node) => {
-    if (node.type === 'buttonNode') {
-      const connectedEdges = edges.filter(edge => edge.source === node.id);
-      const nextNodeIds = connectedEdges.map(edge => edge.target);
-      const nextNode = nodes.find(n => nextNodeIds.includes(n.id));
-      if (nextNode) {
-        setCurrentNode(nextNode);
-        setVideoEnded(false);
-        setIsPlaying(true);
-      }
-    } else {
+    // Si le nœud cible est un nœud vidéo, on le joue directement
+    if (node.type === 'videoNode') {
       setCurrentNode(node);
-      setVideoEnded(false);
       setIsPlaying(true);
+      setVideoEnded(false);
+    } else {
+      // Si c'est un nœud de type bouton, on cherche la prochaine vidéo
+      const nextVideoNode = edges
+        .filter(edge => edge.source === node.id)
+        .map(edge => nodes.find(n => n.id === edge.target))
+        .find(n => n?.type === 'videoNode');
+
+      if (nextVideoNode) {
+        setCurrentNode(nextVideoNode);
+        setIsPlaying(true);
+        setVideoEnded(false);
+      }
     }
   };
 
-  if (!currentNode || currentNode.type !== 'videoNode') return null;
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      modalRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleVideoEnd = () => {
+    setIsPlaying(false);
+    setVideoEnded(true);
+    // Trouver les nœuds suivants
+    const nextNodes = edges
+      .filter(edge => edge.source === currentNode?.id)
+      .map(edge => nodes.find(n => n.id === edge.target))
+      .filter(Boolean);
+
+    // Si un seul nœud suivant et c'est une vidéo, passer automatiquement
+    if (nextNodes.length === 1 && nextNodes[0].type === 'videoNode') {
+      handleNodeClick(nextNodes[0]);
+    }
+  };
+
+  const getButtonStyle = (nodeStyle = {}) => ({
+    margin: '5px',
+    backgroundColor: nodeStyle.backgroundColor || '#1976d2',
+    color: nodeStyle.color || 'white',
+    borderRadius: nodeStyle.borderRadius || '4px',
+    padding: nodeStyle.padding || '8px 16px',
+    border: nodeStyle.border || 'none',
+    cursor: 'pointer',
+    fontSize: '1.2rem',
+    minWidth: '200px',
+    transition: 'all 0.2s ease-in-out',
+    '&:hover': {
+      backgroundColor: nodeStyle.hoverBackgroundColor || '#1565c0',
+      transform: 'scale(1.02)',
+    },
+    '&.MuiButton-root': {
+      textTransform: 'none',
+      '&:hover': {
+        backgroundColor: nodeStyle.hoverBackgroundColor || '#1565c0',
+        transform: 'scale(1.02)',
+      }
+    }
+  });
 
   return (
-    <Dialog
+    <Modal
       open={open}
       onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{
-        sx: {
-          height: '90vh',
-          bgcolor: 'background.paper',
-        },
+      aria-labelledby="preview-modal"
+      disableEnforceFocus
+      disableAutoFocus
+      keepMounted={false}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      <Box sx={{ position: 'absolute', right: 8, top: 8, zIndex: 2 }}>
-        <IconButton onClick={onClose} color="inherit">
-          <CloseIcon />
-        </IconButton>
-      </Box>
-
-      <DialogContent
-        sx={{
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        style={{
+          backgroundColor: 'black',
+          width: isFullscreen ? '100vw' : '90vw',
+          height: isFullscreen ? '100vh' : '90vh',
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          p: 0,
-          overflow: 'hidden',
-          bgcolor: 'black',
-          position: 'relative',
+          justifyContent: 'center',
+          outline: 'none', // Pour éviter le contour de focus par défaut
         }}
       >
-        <ReactPlayer
-          key={currentNode.id}
-          url={getFullUrl(currentNode.data.videoUrl)}
-          width="100%"
-          height="100%"
-          playing={isPlaying}
-          controls={true}
-          onEnded={handleVideoEnd}
-          config={{
-            file: {
-              attributes: {
-                controlsList: 'nodownload',
-              },
-            },
-          }}
-        />
+        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000 }}>
+          <Tooltip title="Afficher les raccourcis (H)">
+            <IconButton
+              onClick={() => setShowHelp(!showHelp)}
+              sx={{ mr: 1, color: 'white' }}
+            >
+              <Help />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Plein écran (F)">
+            <Button
+              onClick={toggleFullscreen}
+              variant="contained"
+              sx={{ minWidth: 0, p: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+            >
+              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+            </Button>
+          </Tooltip>
+          <Button
+            onClick={onClose}
+            variant="contained"
+            sx={{ minWidth: 0, p: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+          >
+            <Close />
+          </Button>
+        </div>
 
-        {videoEnded && nextNodes.length > 0 && (
-          <Box
-            sx={{
+        {showHelp && (
+          <div
+            style={{
               position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              p: 3,
-              bgcolor: 'rgba(0, 0, 0, 0.8)',
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 2,
-              zIndex: 1,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              padding: '20px',
+              borderRadius: '8px',
+              color: 'white',
+              zIndex: 2000,
+              maxWidth: '400px'
             }}
           >
-            {nextNodes.map((node) => {
-              const buttonStyle = getButtonStyle(node.data?.style);
-              return (
-                <Button
-                  key={node.id}
-                  onClick={() => handleNodeClick(node)}
-                  {...buttonStyle}
-                >
-                  {node.data.label}
-                </Button>
-              );
-            })}
-          </Box>
+            <h3 style={{ marginTop: 0 }}>Raccourcis clavier</h3>
+            <ul style={{ paddingLeft: '20px', marginBottom: 0 }}>
+              <li>Espace / K : Lecture/Pause</li>
+              <li>F : Plein écran</li>
+              <li>Échap : Quitter le plein écran</li>
+              <li>→ : Avancer de 5s</li>
+              <li>← : Reculer de 5s</li>
+              <li>1-5 : Sélectionner un choix</li>
+              <li>H : Afficher/Masquer l'aide</li>
+            </ul>
+          </div>
         )}
-      </DialogContent>
-    </Dialog>
+
+        {currentNode?.type === 'videoNode' && (
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <video
+              ref={videoRef}
+              src={getFullUrl(currentNode.data.videoUrl)}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              autoPlay={isPlaying}
+              onEnded={handleVideoEnd}
+            />
+            <div style={{
+              position: 'absolute',
+              bottom: 20,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: '10px',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              padding: '10px',
+              borderRadius: '8px'
+            }}>
+              <Button
+                onClick={togglePlay}
+                variant="contained"
+                sx={{ minWidth: 0, p: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+              >
+                {isPlaying ? <Pause /> : <PlayArrow />}
+              </Button>
+            </div>
+
+            {/* Afficher les boutons de choix à la fin de la vidéo */}
+            {videoEnded && edges.filter(edge => edge.source === currentNode.id).length > 0 && (
+              <div style={{
+                position: 'absolute',
+                bottom: '10%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '20px',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                padding: '30px',
+                borderRadius: '12px',
+                width: isFullscreen ? '80%' : '90%',
+                maxWidth: '1200px',
+                zIndex: 1000
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                  gap: '15px',
+                  width: '100%',
+                  alignItems: 'stretch',
+                  justifyItems: 'center'
+                }}>
+                  {edges
+                    .filter(edge => edge.source === currentNode.id)
+                    .map((edge, index) => {
+                      const targetNode = nodes.find(n => n.id === edge.target);
+                      return (
+                        <Tooltip key={edge.id} title={`Appuyez sur ${index + 1}`}>
+                          <Button
+                            onClick={() => handleNodeClick(targetNode)}
+                            variant="contained"
+                            disableElevation
+                            sx={{
+                              ...getButtonStyle(currentNode.data.style),
+                              width: '100%',
+                              height: '100%',
+                              minHeight: '60px',
+                              fontSize: isFullscreen ? '1.3rem' : '1.1rem',
+                              padding: isFullscreen ? '16px 24px' : '12px 20px',
+                              display: 'flex',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'flex-start',
+                              textAlign: 'left',
+                              whiteSpace: 'normal',
+                              lineHeight: 1.4,
+                              textTransform: 'none',
+                              '&.MuiButton-root': {
+                                '&:hover': {
+                                  backgroundColor: (currentNode.data.style?.hoverBackgroundColor || '#1565c0') + ' !important',
+                                  transform: 'scale(1.02)',
+                                }
+                              },
+                              '&:hover .choice-number': {
+                                backgroundColor: 'rgba(255,255,255,0.2)',
+                              },
+                            }}
+                          >
+                            <span 
+                              className="choice-number"
+                              style={{ 
+                                marginRight: '15px', 
+                                opacity: 0.8,
+                                fontSize: '0.9em',
+                                backgroundColor: 'rgba(255,255,255,0.15)',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                minWidth: '28px',
+                                textAlign: 'center',
+                                transition: 'all 0.2s ease-in-out',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {index + 1}
+                            </span>
+                            <span style={{ 
+                              flex: 1,
+                              fontWeight: 500,
+                              letterSpacing: '0.3px'
+                            }}>
+                              {edge.label || 'Continuer'}
+                            </span>
+                          </Button>
+                        </Tooltip>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
