@@ -64,45 +64,28 @@ function App() {
         flexDirection: 'column',
         bgcolor: isPlayMode ? '#000' : 'background.default'
       }}>
-        <AppBar 
-          position="static" 
-          sx={{ 
-            bgcolor: isPlayMode ? 'transparent' : 'primary.main',
-            boxShadow: isPlayMode ? 'none' : undefined
-          }}
-        >
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              {isPlayMode ? '' : 'Éditeur de Vidéo Interactive'}
-            </Typography>
-            {!isPlayMode && (
-              <>
-                <Button color="inherit" onClick={handleSave}>
-                  Sauvegarder
-                </Button>
-                <Button color="inherit" onClick={handleLoad}>
-                  Charger
-                </Button>
-              </>
-            )}
-            <Button color="inherit" onClick={togglePlayMode}>
-              {isPlayMode ? 'Mode Édition' : 'Mode Lecture'}
-            </Button>
-            {isPlayMode && (
-              <IconButton 
-                color="inherit" 
-                onClick={toggleFullscreen}
-                sx={{ ml: 1 }}
-              >
-                {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-              </IconButton>
-            )}
-          </Toolbar>
-        </AppBar>
+        <Box sx={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          p: 1,
+          bgcolor: 'rgba(0, 47, 167, 0.95)',
+          color: 'white',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, pl: 2, textAlign: 'center' }}>
+            Éditeur de Vidéo Interactive
+          </Typography>
+        </Box>
 
         <Box sx={{ 
           flexGrow: 1,
           p: isPlayMode ? 0 : 2,
+          pt: isPlayMode ? 0 : 6,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'

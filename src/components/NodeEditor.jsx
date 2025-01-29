@@ -13,6 +13,7 @@ import { Box, Button, IconButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
 import SaveIcon from '@mui/icons-material/Save';
+import AddIcon from '@mui/icons-material/Add';
 import VideoNode from './nodes/VideoNode';
 import VideoInteractiveNode from './nodes/VideoInteractiveNode';
 import ImageButtonNode from './nodes/ImageButtonNode';
@@ -32,6 +33,7 @@ function NodeEditor() {
   const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges] = useEdgesState([]);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const onConnect = useCallback(
     (params) => {
@@ -230,13 +232,31 @@ function NodeEditor() {
     }
   }, [setNodes, setEdges, navigateToNode]);
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
   return (
-    <Box sx={{ width: '100%', height: '100vh', position: 'relative' }}>
+    <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
       {showPlayer ? (
         <ScenarioPlayer
           nodes={nodes}
           edges={edges}
-          onClose={() => setShowPlayer(false)}
+          onClose={() => {
+            setShowPlayer(false);
+            if (isFullscreen) {
+              document.exitFullscreen();
+              setIsFullscreen(false);
+            }
+          }}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
         />
       ) : (
         <ReactFlow
@@ -252,65 +272,116 @@ function NodeEditor() {
             <Box sx={{ 
               display: 'flex', 
               gap: 1, 
-              bgcolor: 'background.paper',
-              p: 1,
-              borderRadius: 1,
-              boxShadow: 1
+              bgcolor: 'rgba(0, 47, 167, 0.95)', 
+              p: 1.5,
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(5px)',
+              '& .MuiButton-root': {
+                minWidth: 'auto',
+                color: 'white',
+                borderRadius: '8px',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                }
+              },
+              '& .MuiIconButton-root': {
+                color: 'white',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }
             }}>
               <Button
-                variant="contained"
-                onClick={() => addNode('videoNode')}
-                sx={{ minWidth: 120 }}
-              >
-                Add Video
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => addNode('videoInteractiveNode')}
-                sx={{ minWidth: 120 }}
-              >
-                Add Interactive Video
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => addNode('imageButtonNode')}
-                sx={{ minWidth: 120 }}
-              >
-                Add Interactive Image
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => addNode('clickableNode')}
-                sx={{ 
-                  minWidth: 120,
-                  bgcolor: 'secondary.main',
-                  '&:hover': {
-                    bgcolor: 'secondary.dark',
-                  }
+                startIcon={<AddIcon />}
+                onClick={(event) => {
+                  const buttonRect = event.currentTarget.getBoundingClientRect();
+                  const menu = document.createElement('div');
+                  menu.style.position = 'fixed';
+                  menu.style.left = `${buttonRect.left}px`;
+                  menu.style.top = `${buttonRect.bottom + 5}px`;
+                  menu.style.backgroundColor = 'rgba(0, 47, 167, 0.95)';
+                  menu.style.borderRadius = '8px';
+                  menu.style.padding = '8px';
+                  menu.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                  menu.style.backdropFilter = 'blur(5px)';
+                  menu.style.zIndex = '9999';
+                  
+                  const options = [
+                    { label: 'Video', type: 'videoNode' },
+                    { label: 'Interactive Video', type: 'videoInteractiveNode' },
+                    { label: 'Interactive Image', type: 'imageButtonNode' },
+                    { label: 'Choice Menu', type: 'clickableNode' }
+                  ];
+                  
+                  options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option.label;
+                    button.style.display = 'block';
+                    button.style.width = '100%';
+                    button.style.padding = '8px 16px';
+                    button.style.border = 'none';
+                    button.style.backgroundColor = 'transparent';
+                    button.style.color = 'white';
+                    button.style.cursor = 'pointer';
+                    button.style.textAlign = 'left';
+                    button.style.borderRadius = '4px';
+                    button.style.minWidth = '180px';
+                    button.style.fontSize = '14px';
+                    button.onmouseover = () => {
+                      button.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    };
+                    button.onmouseout = () => {
+                      button.style.backgroundColor = 'transparent';
+                    };
+                    button.onclick = () => {
+                      addNode(option.type);
+                      document.body.removeChild(menu);
+                    };
+                    menu.appendChild(button);
+                  });
+                  
+                  document.body.appendChild(menu);
+                  
+                  // Fermer le menu si on clique ailleurs
+                  const closeMenu = (e) => {
+                    if (!menu.contains(e.target)) {
+                      document.body.removeChild(menu);
+                      document.removeEventListener('click', closeMenu);
+                    }
+                  };
+                  setTimeout(() => {
+                    document.addEventListener('click', closeMenu);
+                  }, 0);
                 }}
               >
-                Add Choice Menu
+                Add Node
               </Button>
-              <Box sx={{ borderLeft: 1, mx: 1, borderColor: 'divider' }} />
+
+              <Box sx={{ borderLeft: 1, mx: 1, borderColor: 'rgba(255, 255, 255, 0.3)' }} />
+
               <IconButton
-                color="primary"
                 onClick={() => setShowPlayer(true)}
-                sx={{ bgcolor: 'background.paper' }}
+                size="small"
+                title="Play"
               >
                 <PlayArrowIcon />
               </IconButton>
+
               <IconButton
-                color="primary"
                 onClick={handleSave}
-                sx={{ bgcolor: 'background.paper' }}
+                size="small"
+                title="Save"
               >
                 <SaveIcon />
               </IconButton>
+
               <IconButton
-                color="primary"
                 onClick={handleLoad}
-                sx={{ bgcolor: 'background.paper' }}
+                size="small"
+                title="Load"
               >
                 <FileOpenIcon />
               </IconButton>
