@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, IconButton } from '@mui/material';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
 function Player({ nodes, edges, startNodeId }) {
   const [currentNodeId, setCurrentNodeId] = useState(startNodeId);
   const [videoUrl, setVideoUrl] = useState(null);
   const [choices, setChoices] = useState([]);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
 
   const findNodeById = useCallback((id) => {
     return nodes.find(node => node.id === id);
@@ -40,6 +44,51 @@ function Player({ nodes, edges, startNodeId }) {
       setIsPlaying(!isPlaying);
     }
   }, [isPlaying]);
+
+  const handleFullscreenChange = () => {
+    if (!document.fullscreenElement) {
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const enterFullscreen = async () => {
+    if (containerRef.current) {
+      try {
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        } else if (containerRef.current.webkitRequestFullscreen) {
+          await containerRef.current.webkitRequestFullscreen();
+        } else if (containerRef.current.msRequestFullscreen) {
+          await containerRef.current.msRequestFullscreen();
+        }
+        setIsFullscreen(true);
+      } catch (err) {
+        console.error('Error attempting to enable fullscreen:', err);
+      }
+    }
+  };
+
+  const exitFullscreen = async () => {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen();
+      }
+      setIsFullscreen(false);
+    } catch (err) {
+      console.error('Error attempting to disable fullscreen:', err);
+    }
+  };
 
   useEffect(() => {
     if (!currentNodeId) return;
@@ -82,14 +131,17 @@ function Player({ nodes, edges, startNodeId }) {
   }
 
   return (
-    <Box sx={{ 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column',
-      alignItems: 'center', 
-      gap: 2,
-      p: 2
-    }}>
+    <Box 
+      ref={containerRef}
+      sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        gap: 2,
+        p: 2
+      }}
+    >
       {videoUrl && (
         <Box 
           sx={{ 
@@ -124,6 +176,17 @@ function Player({ nodes, edges, startNodeId }) {
           >
             Votre navigateur ne supporte pas la lecture de vidéos.
           </video>
+          <IconButton 
+            sx={{ 
+              position: 'absolute', 
+              top: 10, 
+              right: 10, 
+              zIndex: 1 
+            }}
+            onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+          >
+            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+          </IconButton>
         </Box>
       )}
 
