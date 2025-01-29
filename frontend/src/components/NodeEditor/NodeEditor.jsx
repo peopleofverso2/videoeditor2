@@ -95,7 +95,7 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
           ? 'Nouvelle vidéo'
           : type === 'buttonNode'
           ? 'Nouveau bouton'
-          : 'Nouvelle interaction'
+          : ''
       },
     };
 
@@ -144,7 +144,6 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
       >
         <MenuItem onClick={() => addNode('videoNode')}>Ajouter une vidéo</MenuItem>
         <MenuItem onClick={() => addNode('buttonNode')}>Ajouter un bouton</MenuItem>
-        <MenuItem onClick={() => addNode('interactiveNode')}>Ajouter une interaction</MenuItem>
       </Menu>
     </Box>
   );
