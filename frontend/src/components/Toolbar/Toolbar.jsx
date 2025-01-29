@@ -15,7 +15,6 @@ import {
   Redo as RedoIcon,
   VideoCall as VideoIcon,
   SmartButton as ButtonIcon,
-  QuestionAnswer as InteractiveIcon,
 } from '@mui/icons-material';
 
 export default function Toolbar({ 
@@ -84,17 +83,6 @@ export default function Toolbar({
                 onDragStart={(e) => onDragStart(e, 'videoNode')}
               >
                 Vidéo
-              </Button>
-            </Tooltip>
-            
-            <Tooltip title="Ajouter un nœud interactif">
-              <Button
-                variant="outlined"
-                startIcon={<InteractiveIcon />}
-                draggable
-                onDragStart={(e) => onDragStart(e, 'interactiveNode')}
-              >
-                Interactif
               </Button>
             </Tooltip>
             
