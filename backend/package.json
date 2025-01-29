@@ -1,7 +1,7 @@
 {
-  "name": "interactive-video-editor-backend",
+  "name": "video-editor-backend",
   "version": "1.0.0",
-  "description": "Backend for interactive video editor with node-based system",
+  "description": "Backend for interactive video editor",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
