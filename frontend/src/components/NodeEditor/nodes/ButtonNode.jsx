@@ -52,6 +52,10 @@ const STYLES = {
   },
 };
 
+function adjustColor(color, amount) {
+  return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255,Math.max(0,parseInt(color,16)+amount)).toString(16)).slice(-2));
+}
+
 export default function ButtonNode({ id, data, isConnectable, selected }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(data.label || 'Cliquez ici');
@@ -99,14 +103,25 @@ export default function ButtonNode({ id, data, isConnectable, selected }) {
     setNodes((nodes) =>
       nodes.map((node) => {
         if (node.id === id) {
+          // S'assurer que le style existe et est correctement initialisé
+          const currentStyle = node.data.style || {
+            backgroundColor: '#1976d2',
+            color: 'white',
+            hoverBackgroundColor: '#1565c0',
+            fontSize: '1rem'
+          };
+          
+          // Créer un nouvel objet style pour forcer la mise à jour
+          const newStyle = {
+            ...currentStyle,
+            ...updates,
+          };
+
           return {
             ...node,
             data: {
               ...node.data,
-              style: {
-                ...node.data.style,
-                ...updates,
-              },
+              style: newStyle,
             },
           };
         }
@@ -132,7 +147,12 @@ export default function ButtonNode({ id, data, isConnectable, selected }) {
   const buttonStyle = {
     ...(STYLES[currentStyle.variant || 'solid']),
     fontSize: currentStyle.fontSize || FONT_SIZES.medium,
-    bgcolor: currentStyle.color || '#1976d2',
+    backgroundColor: currentStyle.backgroundColor || '#1976d2',
+    color: currentStyle.color || 'white',
+    '&:hover': {
+      backgroundColor: currentStyle.hoverBackgroundColor || '#1565c0',
+      transform: 'scale(1.02)',
+    },
   };
 
   return (
@@ -253,7 +273,12 @@ export default function ButtonNode({ id, data, isConnectable, selected }) {
                 <Box
                   key={color}
                   onClick={() => {
-                    updateStyle({ color });
+                    const newStyle = {
+                      backgroundColor: color,
+                      hoverBackgroundColor: adjustColor(color, -20),
+                      color: 'white',
+                    };
+                    updateStyle(newStyle);
                     setAnchorEl(null);
                   }}
                   sx={{
@@ -262,7 +287,7 @@ export default function ButtonNode({ id, data, isConnectable, selected }) {
                     bgcolor: color,
                     borderRadius: 1,
                     cursor: 'pointer',
-                    border: currentStyle.color === color ? '2px solid black' : '1px solid rgba(0,0,0,0.1)',
+                    border: currentStyle.backgroundColor === color ? '2px solid black' : '1px solid rgba(0,0,0,0.1)',
                     '&:hover': {
                       opacity: 0.8,
                     },

@@ -57,7 +57,19 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
       id: `${type}-${Date.now()}`,
       type,
       position,
-      data: { label: `Nouveau ${type}` },
+      data: { 
+        label: type === 'videoNode' 
+          ? 'Nouvelle vidéo'
+          : type === 'buttonNode'
+          ? 'Nouveau bouton'
+          : '',
+        style: type === 'buttonNode' ? {
+          backgroundColor: '#1976d2',
+          color: 'white',
+          hoverBackgroundColor: '#1565c0',
+          fontSize: '1rem'
+        } : undefined
+      },
     };
 
     setNodes((nds) => nds.concat(newNode));
@@ -95,7 +107,13 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
           ? 'Nouvelle vidéo'
           : type === 'buttonNode'
           ? 'Nouveau bouton'
-          : ''
+          : '',
+        style: type === 'buttonNode' ? {
+          backgroundColor: '#1976d2',
+          color: 'white',
+          hoverBackgroundColor: '#1565c0',
+          fontSize: '1rem'
+        } : undefined
       },
     };
 

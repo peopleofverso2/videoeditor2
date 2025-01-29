@@ -141,29 +141,68 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
     }
   };
 
-  const getButtonStyle = (nodeStyle = {}) => ({
-    margin: '5px',
-    backgroundColor: nodeStyle.backgroundColor || '#1976d2',
-    color: nodeStyle.color || 'white',
-    borderRadius: nodeStyle.borderRadius || '4px',
-    padding: nodeStyle.padding || '8px 16px',
-    border: nodeStyle.border || 'none',
-    cursor: 'pointer',
-    fontSize: '1.2rem',
-    minWidth: '200px',
-    transition: 'all 0.2s ease-in-out',
-    '&:hover': {
-      backgroundColor: nodeStyle.hoverBackgroundColor || '#1565c0',
-      transform: 'scale(1.02)',
-    },
-    '&.MuiButton-root': {
-      textTransform: 'none',
-      '&:hover': {
-        backgroundColor: nodeStyle.hoverBackgroundColor || '#1565c0',
-        transform: 'scale(1.02)',
+  const getButtonStyle = (nodeStyle = {}) => {
+    // Style par défaut
+    const defaultStyle = {
+      backgroundColor: '#1976d2',
+      color: 'white',
+      hoverBackgroundColor: '#1565c0',
+      fontSize: '1rem'
+    };
+
+    // Fusionner avec le style du nœud
+    const style = {
+      ...defaultStyle,
+      ...nodeStyle
+    };
+    
+    return {
+      margin: '5px',
+      backgroundColor: style.backgroundColor,
+      color: style.color,
+      borderRadius: '4px',
+      padding: '8px 16px',
+      border: 'none',
+      cursor: 'pointer',
+      fontSize: style.fontSize,
+      minWidth: '200px',
+      transition: 'all 0.2s ease-in-out',
+      '&.MuiButton-root': {
+        backgroundColor: style.backgroundColor,
+        color: style.color,
+        textTransform: 'none',
+        '&:hover': {
+          backgroundColor: `${style.hoverBackgroundColor} !important`,
+          transform: 'scale(1.02)',
+        }
       }
+    };
+  };
+
+  // Fonction utilitaire pour ajuster la couleur (assombrir/éclaircir)
+  const adjustColor = (color, amount) => {
+    const clamp = (val) => Math.min(Math.max(val, 0), 255);
+    
+    // Si la couleur est au format hex
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      const num = parseInt(hex, 16);
+      const r = clamp(((num >> 16) & 0xFF) + amount);
+      const g = clamp(((num >> 8) & 0xFF) + amount);
+      const b = clamp((num & 0xFF) + amount);
+      
+      return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
     }
-  });
+    
+    // Si la couleur est au format rgb/rgba
+    const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+    if (rgbaMatch) {
+      const [_, r, g, b] = rgbaMatch;
+      return `rgb(${clamp(parseInt(r) + amount)}, ${clamp(parseInt(g) + amount)}, ${clamp(parseInt(b) + amount)})`;
+    }
+    
+    return color;
+  };
 
   return (
     <Modal
@@ -316,7 +355,7 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
                             variant="contained"
                             disableElevation
                             sx={{
-                              ...getButtonStyle(currentNode.data.style),
+                              ...getButtonStyle(targetNode.data.style || {}),
                               width: '100%',
                               height: '100%',
                               minHeight: '60px',
@@ -332,7 +371,7 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
                               textTransform: 'none',
                               '&.MuiButton-root': {
                                 '&:hover': {
-                                  backgroundColor: (currentNode.data.style?.hoverBackgroundColor || '#1565c0') + ' !important',
+                                  backgroundColor: (targetNode.data.style?.hoverBackgroundColor || '#1565c0') + ' !important',
                                   transform: 'scale(1.02)',
                                 }
                               },
@@ -363,7 +402,7 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
                               fontWeight: 500,
                               letterSpacing: '0.3px'
                             }}>
-                              {edge.label || 'Continuer'}
+                              {targetNode.data.label || 'Continuer'}
                             </span>
                           </Button>
                         </Tooltip>
