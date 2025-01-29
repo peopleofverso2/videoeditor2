@@ -81,83 +81,71 @@ export async function exportProject(nodes, edges) {
 
 export async function importProject(file) {
   try {
-    if (!file || !(file instanceof File)) {
-      throw new Error('Paramètre invalide: le fichier est manquant ou invalide');
+    if (!file) {
+      throw new Error('Aucun fichier sélectionné');
     }
 
-    console.log('Début de l\'import du projet:', {
+    console.log('Début import:', {
       name: file.name,
-      size: file.size,
-      type: file.type
+      type: file.type,
+      size: file.size
     });
-    
+
     // Vérifier l'extension du fichier
     if (!file.name.toLowerCase().endsWith('.pov')) {
       throw new Error('Le fichier doit avoir l\'extension .pov');
     }
 
-    // Lire le fichier
-    console.log('Lecture du fichier...');
-    const zip = new JSZip();
+    // Lire le fichier comme ArrayBuffer d'abord
+    const fileBuffer = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(new Error('Erreur de lecture du fichier'));
+      reader.readAsArrayBuffer(file);
+    });
+
+    console.log('Fichier lu comme ArrayBuffer:', {
+      byteLength: fileBuffer.byteLength
+    });
+
+    // Charger le ZIP
+    const zip = await JSZip.loadAsync(fileBuffer, {
+      createFolders: true,
+      checkCRC32: true
+    });
     
-    try {
-      await zip.loadAsync(file, {
-        createFolders: true
-      });
-    } catch (error) {
-      logError('Erreur lors de la lecture du zip:', error);
-      throw new Error('Impossible de lire le fichier .pov. Vérifiez que le fichier n\'est pas corrompu.');
-    }
+    console.log('Contenu du ZIP:', Object.keys(zip.files));
 
-    // Vérifier la structure du zip
-    const files = Object.keys(zip.files);
-    console.log('Contenu du zip:', files);
-
-    // Vérifier et lire scenario.json
+    // Lire le scénario
     const scenarioFile = zip.file('scenario.json');
     if (!scenarioFile) {
-      throw new Error('Le fichier .pov est invalide: scenario.json est manquant');
+      throw new Error('Le fichier scenario.json est manquant dans le projet');
     }
 
+    const scenarioJson = await scenarioFile.async('string');
     let scenario;
     try {
-      const scenarioJson = await scenarioFile.async('string');
       scenario = JSON.parse(scenarioJson);
-      console.log('Scénario chargé:', {
-        nodesCount: scenario.nodes?.length,
-        edgesCount: scenario.edges?.length,
-        version: scenario.version
-      });
-    } catch (error) {
-      logError('Erreur lors de la lecture du scénario:', error);
-      throw new Error('Le fichier scenario.json est invalide ou corrompu');
+    } catch (e) {
+      throw new Error('Le fichier scenario.json est corrompu');
     }
 
-    // Valider la structure du scénario
-    if (!scenario.nodes || !Array.isArray(scenario.nodes) || 
-        !scenario.edges || !Array.isArray(scenario.edges)) {
-      throw new Error('Le scénario est invalide: structure incorrecte');
+    if (!scenario.nodes || !Array.isArray(scenario.nodes) || !scenario.edges || !Array.isArray(scenario.edges)) {
+      throw new Error('Structure du scénario invalide');
     }
 
-    // Gérer les médias
-    const mediaFiles = Object.keys(zip.files).filter(path => 
-      path.startsWith('media/') && !path.endsWith('/')
-    );
-    
-    console.log('Médias trouvés:', mediaFiles);
-
-    // Upload des médias en parallèle
-    const mediaResults = await Promise.all(
-      mediaFiles.map(async (path) => {
-        const filename = path.split('/').pop();
-        try {
-          console.log('Traitement du média:', filename);
-          const mediaBlob = await zip.file(path).async('blob');
-          
+    // Upload des médias
+    for (const node of scenario.nodes) {
+      if (node.type === 'videoNode' && node.data.videoUrl) {
+        const filename = node.data.videoUrl.split('/').pop();
+        const mediaFile = zip.file(`media/${filename}`);
+        
+        if (mediaFile) {
+          console.log('Upload du média:', filename);
+          const mediaBlob = await mediaFile.async('blob');
           const formData = new FormData();
           formData.append('file', mediaBlob, filename);
 
-          console.log('Upload du média:', filename);
           const response = await fetch(`${API_URL}/api/upload`, {
             method: 'POST',
             body: formData,
@@ -165,50 +153,23 @@ export async function importProject(file) {
 
           if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+            console.error('Erreur upload:', errorText);
+            throw new Error(`Erreur lors de l'upload de ${filename}: ${errorText}`);
           }
 
-          const { path: uploadedPath } = await response.json();
-          console.log('Média uploadé:', filename, '=>', uploadedPath);
-          return { filename, uploadedPath };
-        } catch (error) {
-          logError(`Erreur lors de l'upload de ${filename}:`, error);
-          return { filename, error };
-        }
-      })
-    );
-
-    // Mise à jour des chemins dans le scénario
-    scenario.nodes = scenario.nodes.map(node => {
-      if (node.type === 'videoNode' && node.data.videoUrl) {
-        const filename = node.data.videoUrl.split('/').pop();
-        const mediaResult = mediaResults.find(r => r.filename === filename);
-        
-        if (mediaResult?.uploadedPath) {
-          console.log('Mise à jour du chemin pour:', filename, '=>', mediaResult.uploadedPath);
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              videoUrl: mediaResult.uploadedPath,
-            },
-          };
-        } else if (mediaResult?.error) {
-          console.warn(`Le média ${filename} n'a pas pu être uploadé:`, mediaResult.error);
+          const { path } = await response.json();
+          node.data.videoUrl = path;
+          console.log('Média uploadé:', filename, '=>', path);
         }
       }
-      return node;
-    });
+    }
 
-    console.log('Import terminé avec succès');
     return {
       nodes: scenario.nodes,
       edges: scenario.edges,
     };
   } catch (error) {
-    // Assurons-nous que l'erreur a un message
-    const errorMessage = error?.message || 'Une erreur inconnue est survenue';
-    logError('Erreur lors de l\'import:', error);
-    throw new Error(errorMessage);
+    console.error('Erreur détaillée:', error);
+    throw error;
   }
 }
