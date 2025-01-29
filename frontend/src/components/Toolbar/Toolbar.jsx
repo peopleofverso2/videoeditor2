@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   AppBar,
   Toolbar as MuiToolbar,
@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import {
   Save as SaveIcon,
+  Upload as UploadIcon,
   PlayArrow as PlayIcon,
   Undo as UndoIcon,
   Redo as RedoIcon,
@@ -19,15 +20,32 @@ import {
 
 export default function Toolbar({ 
   onSave,
+  onImport,
   onPlay,
   onUndo,
   onRedo,
   canUndo,
   canRedo 
 }) {
+  const fileInputRef = useRef();
+
   const onDragStart = (event, nodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file && file.name.endsWith('.pov')) {
+      onImport(file);
+    } else {
+      alert('Veuillez sélectionner un fichier .pov valide');
+    }
+    event.target.value = null; // Reset pour permettre de sélectionner le même fichier
   };
 
   return (
@@ -41,11 +59,25 @@ export default function Toolbar({
         >
           {/* Actions principales */}
           <Stack direction="row" spacing={1}>
-            <Tooltip title="Sauvegarder">
+            <Tooltip title="Sauvegarder le projet (.pov)">
               <IconButton onClick={onSave}>
                 <SaveIcon />
               </IconButton>
             </Tooltip>
+            
+            <Tooltip title="Importer un projet (.pov)">
+              <IconButton onClick={handleImportClick}>
+                <UploadIcon />
+              </IconButton>
+            </Tooltip>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".pov"
+              onChange={handleFileChange}
+            />
             
             <Tooltip title="Lancer la prévisualisation">
               <IconButton onClick={onPlay} color="primary">
@@ -58,7 +90,7 @@ export default function Toolbar({
           <Stack direction="row" spacing={1}>
             <Tooltip title="Annuler">
               <span>
-                <IconButton disabled={!canUndo} onClick={onUndo}>
+                <IconButton onClick={onUndo} disabled={!canUndo}>
                   <UndoIcon />
                 </IconButton>
               </span>
@@ -66,23 +98,23 @@ export default function Toolbar({
             
             <Tooltip title="Rétablir">
               <span>
-                <IconButton disabled={!canRedo} onClick={onRedo}>
+                <IconButton onClick={onRedo} disabled={!canRedo}>
                   <RedoIcon />
                 </IconButton>
               </span>
             </Tooltip>
           </Stack>
 
-          {/* Nœuds draggables */}
+          {/* Ajout de nœuds */}
           <Stack direction="row" spacing={1}>
-            <Tooltip title="Ajouter un nœud vidéo">
+            <Tooltip title="Ajouter une vidéo">
               <Button
                 variant="outlined"
                 startIcon={<VideoIcon />}
                 draggable
                 onDragStart={(e) => onDragStart(e, 'videoNode')}
               >
-                Vidéo
+                VIDÉO
               </Button>
             </Tooltip>
             
@@ -93,7 +125,7 @@ export default function Toolbar({
                 draggable
                 onDragStart={(e) => onDragStart(e, 'buttonNode')}
               >
-                Bouton
+                BOUTON
               </Button>
             </Tooltip>
           </Stack>

@@ -1,37 +1,14 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { ThemeProvider, CssBaseline, Box } from '@mui/material';
-import { createTheme } from '@mui/material/styles';
+import React, { useState, useCallback } from 'react';
+import { Box } from '@mui/material';
 import NodeEditor from './components/NodeEditor/NodeEditor';
 import Toolbar from './components/Toolbar/Toolbar';
 import PreviewModal from './components/Preview/PreviewModal';
 import { useNodesState, useEdgesState } from 'reactflow';
+import { exportProject, importProject } from './services/exportService';
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
-
-const initialNodes = [
-  {
-    id: 'start',
-    type: 'videoNode',
-    position: { x: 250, y: 100 },
-    data: { label: 'Vidéo de départ' },
-  },
-];
-
-const initialEdges = [];
-
-function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+export default function App() {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   
   // Historique pour undo/redo
@@ -92,54 +69,68 @@ function App() {
     setEdges(next.edges);
   }, [history, setNodes, setEdges]);
 
-  const handleSave = useCallback(() => {
-    // TODO: Implémenter la sauvegarde
-    console.log('Saving...', { nodes, edges });
+  const handleSave = useCallback(async () => {
+    try {
+      await exportProject(nodes, edges);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde du projet');
+    }
   }, [nodes, edges]);
+
+  const handleImport = useCallback(async (file) => {
+    try {
+      const { nodes: importedNodes, edges: importedEdges } = await importProject(file);
+      
+      // Mettre à jour l'état
+      setNodes(importedNodes);
+      setEdges(importedEdges);
+      
+      // Réinitialiser l'historique
+      setHistory({
+        past: [],
+        present: { nodes: importedNodes, edges: importedEdges },
+        future: []
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'import:', error);
+      alert('Erreur lors de l\'import du projet');
+    }
+  }, [setNodes, setEdges, setHistory]);
 
   const handlePlay = useCallback(() => {
     setPreviewOpen(true);
   }, [setPreviewOpen]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box sx={{ 
-        height: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column',
-        bgcolor: 'background.default' 
-      }}>
-        <Toolbar
-          onSave={handleSave}
-          onPlay={handlePlay}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          canUndo={history.past.length > 0}
-          canRedo={history.future.length > 0}
-        />
-        
-        <Box sx={{ flex: 1, position: 'relative' }}>
-          <NodeEditor
-            scenarioId="test"
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            setNodes={setNodes}
-            setEdges={setEdges}
-          />
-        </Box>
-
-        <PreviewModal
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar
+        onSave={handleSave}
+        onImport={handleImport}
+        onPlay={handlePlay}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={history.past.length > 0}
+        canRedo={history.future.length > 0}
+      />
+      
+      <Box sx={{ flexGrow: 1 }}>
+        <NodeEditor
           nodes={nodes}
           edges={edges}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
+          setNodes={setNodes}
+          setEdges={setEdges}
         />
       </Box>
-    </ThemeProvider>
+
+      <PreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        nodes={nodes}
+        edges={edges}
+      />
+    </Box>
   );
 }
-
-export default App;
