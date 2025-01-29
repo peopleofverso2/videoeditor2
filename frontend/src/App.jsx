@@ -88,12 +88,16 @@ export default function App() {
       await exportProject(nodes, edges);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde du projet');
+      alert(`Erreur lors de la sauvegarde du projet: ${error.message || 'Une erreur inconnue est survenue'}`);
     }
   }, [nodes, edges]);
 
   const handleImport = useCallback(async (file) => {
     try {
+      if (!file) {
+        throw new Error('Aucun fichier sélectionné');
+      }
+
       const { nodes: importedNodes, edges: importedEdges } = await importProject(file);
       
       // Mettre à jour l'état
@@ -108,7 +112,7 @@ export default function App() {
       });
     } catch (error) {
       console.error('Erreur lors de l\'import:', error);
-      alert('Erreur lors de l\'import du projet');
+      alert(`Erreur lors de l'import du projet: ${error.message || 'Une erreur inconnue est survenue'}`);
     }
   }, [setNodes, setEdges, setHistory]);
 

@@ -30,10 +30,33 @@ export default function Toolbar({
   const fileInputRef = useRef();
 
   const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      
+      // Vérifier le type de fichier
+      if (!file.name.toLowerCase().endsWith('.pov')) {
+        alert('Le fichier doit avoir l\'extension .pov');
+        event.target.value = '';
+        return;
+      }
+
+      // Vérifier la taille du fichier (max 100MB)
+      const maxSize = 100 * 1024 * 1024; // 100MB en octets
+      if (file.size > maxSize) {
+        alert('Le fichier est trop volumineux. La taille maximale est de 100MB.');
+        event.target.value = '';
+        return;
+      }
+
       await onImport(file);
-      event.target.value = ''; // Reset input
+    } catch (error) {
+      console.error('Erreur lors de la sélection du fichier:', error);
+      throw error; // Propager l'erreur pour qu'elle soit gérée par le composant parent
+    } finally {
+      event.target.value = ''; // Reset input dans tous les cas
     }
   };
 
@@ -50,7 +73,63 @@ export default function Toolbar({
         </Typography>
 
         <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
-          {/* Éléments glissables */}
+          {/* Boutons de contrôle */}
+          <Tooltip title="Annuler (Ctrl+Z)">
+            <span>
+              <IconButton 
+                onClick={onUndo} 
+                disabled={!canUndo}
+                size="large"
+              >
+                <UndoIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Rétablir (Ctrl+Shift+Z)">
+            <span>
+              <IconButton 
+                onClick={onRedo} 
+                disabled={!canRedo}
+                size="large"
+              >
+                <RedoIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Sauvegarder le projet">
+            <IconButton onClick={onSave} size="large">
+              <SaveIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Importer un projet">
+            <IconButton 
+              onClick={() => fileInputRef.current?.click()} 
+              size="large"
+            >
+              <UploadIcon />
+            </IconButton>
+          </Tooltip>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pov"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+
+          <Tooltip title="Lancer la prévisualisation">
+            <IconButton onClick={onPlay} size="large">
+              <PlayIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {/* Boutons de nœuds */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
             startIcon={<VideoLibraryIcon />}
@@ -69,71 +148,6 @@ export default function Toolbar({
             Bouton
           </Button>
         </Box>
-
-        {/* Actions */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Annuler">
-            <span>
-              <IconButton 
-                onClick={onUndo} 
-                disabled={!canUndo}
-                size="large"
-              >
-                <UndoIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Rétablir">
-            <span>
-              <IconButton 
-                onClick={onRedo} 
-                disabled={!canRedo}
-                size="large"
-              >
-                <RedoIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Sauvegarder">
-            <IconButton 
-              onClick={onSave}
-              color="primary"
-              size="large"
-            >
-              <SaveIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Importer">
-            <IconButton
-              onClick={() => fileInputRef.current?.click()}
-              color="primary"
-              size="large"
-            >
-              <UploadIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Lancer">
-            <IconButton
-              onClick={onPlay}
-              color="primary"
-              size="large"
-            >
-              <PlayIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept=".pov"
-          style={{ display: 'none' }}
-        />
       </MuiToolbar>
     </AppBar>
   );

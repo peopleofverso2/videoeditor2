@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "videoNode-1738184157753",
+      "id": "videoNode-1738175275347",
       "type": "videoNode",
       "position": {
-        "x": -289.4701076087216,
-        "y": 140.97999608452685
+        "x": -93.88805168996802,
+        "y": 71.5445601615192
       },
       "data": {
         "label": "1738165895362-698342381.mp4",
@@ -15,137 +15,136 @@
       "height": 240,
       "selected": false,
       "positionAbsolute": {
-        "x": -289.4701076087216,
-        "y": 140.97999608452685
+        "x": -93.88805168996802,
+        "y": 71.5445601615192
       },
-      "dragging": true
+      "dragging": false
     },
     {
-      "id": "buttonNode-1738184160347",
+      "id": "buttonNode-1738175283952",
       "type": "buttonNode",
       "position": {
-        "x": 50.17586013099333,
-        "y": 308.9123344946278
+        "x": 309.3333333333333,
+        "y": 60
       },
       "data": {
-        "label": "HAUT",
+        "label": "Nouveau buttonNode",
         "style": {
-          "backgroundColor": "#ed6c02",
           "color": "white",
-          "hoverBackgroundColor": "#d95800",
-          "fontSize": "1rem"
-        }
-      },
-      "width": 222,
-      "height": 144,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 50.17586013099333,
-        "y": 308.9123344946278
-      },
-      "dragging": false
-    },
-    {
-      "id": "videoNode-1738184207558",
-      "type": "videoNode",
-      "position": {
-        "x": 459.66362422523486,
-        "y": 146.917096576869
-      },
-      "data": {
-        "label": "1738164916244-291760058.mp4",
-        "videoUrl": "/uploads/1738164916244-291760058.mp4"
-      },
-      "width": 302,
-      "height": 240,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 459.66362422523486,
-        "y": 146.917096576869
-      },
-      "dragging": false
-    },
-    {
-      "id": "buttonNode-1738184219847",
-      "type": "buttonNode",
-      "position": {
-        "x": 92.4199405982074,
-        "y": 508.1623675646435
-      },
-      "data": {
-        "label": "BAS",
-        "style": {
+          "fontSize": "1.1rem",
           "backgroundColor": "#d32f2f",
-          "color": "white",
-          "hoverBackgroundColor": "#bf1b1b",
-          "fontSize": "1rem",
-          "variant": "solid"
+          "hoverBackgroundColor": "#bf1b1b"
         }
       },
       "width": 222,
-      "height": 144,
-      "selected": false,
+      "height": 178,
       "positionAbsolute": {
-        "x": 92.4199405982074,
-        "y": 508.1623675646435
+        "x": 309.3333333333333,
+        "y": 60
       },
+      "selected": false,
       "dragging": false
     },
     {
-      "id": "videoNode-1738184270439",
+      "id": "videoNode-1738175294160",
       "type": "videoNode",
       "position": {
-        "x": 391.3333333333333,
-        "y": 315.3333333333333
+        "x": 607.8342691598884,
+        "y": 141.0703556140909
       },
       "data": {
-        "label": "1738165911296-267232651.mp4",
-        "videoUrl": "/uploads/1738165911296-267232651.mp4"
+        "label": "1738167348886-557143454.mp4",
+        "videoUrl": "/uploads/1738167348886-557143454.mp4"
       },
       "width": 302,
       "height": 240,
       "selected": false,
-      "dragging": false,
       "positionAbsolute": {
-        "x": 391.3333333333333,
-        "y": 315.3333333333333
-      }
+        "x": 607.8342691598884,
+        "y": 141.0703556140909
+      },
+      "dragging": false
+    },
+    {
+      "id": "videoNode-1738175296207",
+      "type": "videoNode",
+      "position": {
+        "x": 676.4133266427082,
+        "y": -177.4958551086316
+      },
+      "data": {
+        "label": "1738165930376-654104051.mp4",
+        "videoUrl": "/uploads/1738165930376-654104051.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 676.4133266427082,
+        "y": -177.4958551086316
+      },
+      "dragging": false
+    },
+    {
+      "id": "buttonNode-1738175303195",
+      "type": "buttonNode",
+      "position": {
+        "x": 289.87476604336126,
+        "y": 299.698717022221
+      },
+      "data": {
+        "label": "Nouveau buttonNode",
+        "style": {
+          "color": "white",
+          "fontSize": "1.1rem",
+          "backgroundColor": "#d32f2f",
+          "hoverBackgroundColor": "#bf1b1b"
+        }
+      },
+      "width": 222,
+      "height": 182,
+      "selected": true,
+      "positionAbsolute": {
+        "x": 289.87476604336126,
+        "y": 299.698717022221
+      },
+      "dragging": false
     }
   ],
   "edges": [
     {
-      "source": "videoNode-1738184157753",
+      "source": "videoNode-1738175275347",
       "sourceHandle": null,
-      "target": "buttonNode-1738184160347",
+      "target": "buttonNode-1738175283952",
       "targetHandle": null,
-      "id": "evideoNode-1738184157753-buttonNode-1738184160347",
+      "id": "evideoNode-1738175275347-buttonNode-1738175283952",
       "animated": true
     },
     {
-      "source": "buttonNode-1738184160347",
+      "source": "videoNode-1738175275347",
       "sourceHandle": null,
-      "target": "videoNode-1738184207558",
+      "target": "buttonNode-1738175303195",
       "targetHandle": null,
-      "id": "ebuttonNode-1738184160347-videoNode-1738184207558",
+      "id": "evideoNode-1738175275347-buttonNode-1738175303195",
       "animated": true
     },
     {
-      "source": "buttonNode-1738184219847",
+      "source": "buttonNode-1738175303195",
       "sourceHandle": null,
-      "target": "videoNode-1738184270439",
+      "target": "videoNode-1738175294160",
       "targetHandle": null,
-      "id": "ebuttonNode-1738184219847-videoNode-1738184270439",
+      "id": "ebuttonNode-1738175303195-videoNode-1738175294160",
       "animated": true
     },
     {
-      "source": "videoNode-1738184157753",
+      "source": "buttonNode-1738175283952",
       "sourceHandle": null,
-      "target": "buttonNode-1738184219847",
+      "target": "videoNode-1738175296207",
       "targetHandle": null,
-      "id": "evideoNode-1738184157753-buttonNode-1738184219847",
+      "id": "ebuttonNode-1738175283952-videoNode-1738175296207",
       "animated": true
     }
   ],
   "version": "1.0",
-  "created": "2025-01-29T21:00:08.301Z"
+  "created": "2025-01-29T19:34:41.488Z"
 }
