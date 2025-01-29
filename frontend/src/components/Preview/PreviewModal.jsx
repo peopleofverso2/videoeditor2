@@ -16,6 +16,23 @@ const getFullUrl = (path) => {
   return path.startsWith('http') ? path : `${API_URL}${path}`;
 };
 
+const STYLES = {
+  solid: {
+    variant: 'contained',
+    style: {},
+  },
+  outline: {
+    variant: 'outlined',
+    style: {},
+  },
+  gradient: {
+    variant: 'contained',
+    style: {
+      background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)',
+    },
+  },
+};
+
 export default function PreviewModal({ open, onClose, nodes, edges }) {
   const [currentNode, setCurrentNode] = useState(null);
   const [videoEnded, setVideoEnded] = useState(false);
@@ -33,13 +50,11 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
 
   useEffect(() => {
     if (currentNode) {
-      // Trouver les nœuds directement connectés
       const outgoingEdges = edges.filter(edge => edge.source === currentNode.id);
       const nextNodeIds = outgoingEdges.map(edge => edge.target);
       const nextNodesList = nodes.filter(node => nextNodeIds.includes(node.id));
       setNextNodes(nextNodesList);
 
-      // Enchaînement automatique si un seul nœud vidéo suivant
       if (videoEnded && nextNodesList.length === 1 && nextNodesList[0].type === 'videoNode') {
         setCurrentNode(nextNodesList[0]);
         setVideoEnded(false);
@@ -53,8 +68,28 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
     setIsPlaying(false);
   };
 
+  const getButtonStyle = (nodeStyle = {}) => {
+    const style = STYLES[nodeStyle.variant || 'solid'];
+    return {
+      variant: style.variant,
+      sx: {
+        px: 4,
+        py: 2,
+        fontSize: nodeStyle.fontSize || '1.1rem',
+        fontWeight: 500,
+        minWidth: '200px',
+        transition: 'all 0.2s ease',
+        backgroundColor: nodeStyle.color,
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          backgroundColor: nodeStyle.color ? `${nodeStyle.color}dd` : undefined,
+        },
+        ...style.style,
+      },
+    };
+  };
+
   const handleNodeClick = (node) => {
-    // Si c'est un bouton, trouver la vidéo liée
     if (node.type === 'buttonNode') {
       const connectedEdges = edges.filter(edge => edge.source === node.id);
       const nextNodeIds = connectedEdges.map(edge => edge.target);
@@ -120,7 +155,6 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
           }}
         />
 
-        {/* Boutons de navigation qui apparaissent à la fin de la vidéo */}
         {videoEnded && nextNodes.length > 0 && (
           <Box
             sx={{
@@ -136,27 +170,18 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
               zIndex: 1,
             }}
           >
-            {nextNodes.map((node) => (
-              <Button
-                key={node.id}
-                variant="contained"
-                size="large"
-                onClick={() => handleNodeClick(node)}
-                sx={{
-                  px: 4,
-                  py: 2,
-                  fontSize: '1.1rem',
-                  fontWeight: 500,
-                  minWidth: '200px',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                  },
-                }}
-              >
-                {node.data.label}
-              </Button>
-            ))}
+            {nextNodes.map((node) => {
+              const buttonStyle = getButtonStyle(node.data?.style);
+              return (
+                <Button
+                  key={node.id}
+                  onClick={() => handleNodeClick(node)}
+                  {...buttonStyle}
+                >
+                  {node.data.label}
+                </Button>
+              );
+            })}
           </Box>
         )}
       </DialogContent>
