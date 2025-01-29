@@ -1,11 +1,11 @@
 {
   "nodes": [
     {
-      "id": "videoNode-1738175275347",
+      "id": "videoNode-1738184157753",
       "type": "videoNode",
       "position": {
-        "x": -93.88805168996802,
-        "y": 71.5445601615192
+        "x": -289.4701076087216,
+        "y": 140.97999608452685
       },
       "data": {
         "label": "1738165895362-698342381.mp4",
@@ -15,122 +15,137 @@
       "height": 240,
       "selected": false,
       "positionAbsolute": {
-        "x": -93.88805168996802,
-        "y": 71.5445601615192
+        "x": -289.4701076087216,
+        "y": 140.97999608452685
       },
-      "dragging": false
+      "dragging": true
     },
     {
-      "id": "buttonNode-1738175283952",
+      "id": "buttonNode-1738184160347",
       "type": "buttonNode",
       "position": {
-        "x": 309.3333333333333,
-        "y": 60
+        "x": 50.17586013099333,
+        "y": 308.9123344946278
       },
       "data": {
-        "label": "Nouveau buttonNode"
+        "label": "HAUT",
+        "style": {
+          "backgroundColor": "#ed6c02",
+          "color": "white",
+          "hoverBackgroundColor": "#d95800",
+          "fontSize": "1rem"
+        }
       },
       "width": 222,
-      "height": 172,
+      "height": 144,
+      "selected": false,
       "positionAbsolute": {
-        "x": 309.3333333333333,
-        "y": 60
-      }
-    },
-    {
-      "id": "videoNode-1738175294160",
-      "type": "videoNode",
-      "position": {
-        "x": 607.8342691598884,
-        "y": 141.0703556140909
-      },
-      "data": {
-        "label": "1738167348886-557143454.mp4",
-        "videoUrl": "/uploads/1738167348886-557143454.mp4"
-      },
-      "width": 302,
-      "height": 244,
-      "selected": true,
-      "positionAbsolute": {
-        "x": 607.8342691598884,
-        "y": 141.0703556140909
+        "x": 50.17586013099333,
+        "y": 308.9123344946278
       },
       "dragging": false
     },
     {
-      "id": "videoNode-1738175296207",
+      "id": "videoNode-1738184207558",
       "type": "videoNode",
       "position": {
-        "x": 676.4133266427082,
-        "y": -177.4958551086316
+        "x": 459.66362422523486,
+        "y": 146.917096576869
       },
       "data": {
-        "label": "1738165930376-654104051.mp4",
-        "videoUrl": "/uploads/1738165930376-654104051.mp4"
+        "label": "1738164916244-291760058.mp4",
+        "videoUrl": "/uploads/1738164916244-291760058.mp4"
       },
       "width": 302,
       "height": 240,
       "selected": false,
       "positionAbsolute": {
-        "x": 676.4133266427082,
-        "y": -177.4958551086316
+        "x": 459.66362422523486,
+        "y": 146.917096576869
       },
       "dragging": false
     },
     {
-      "id": "buttonNode-1738175303195",
+      "id": "buttonNode-1738184219847",
       "type": "buttonNode",
       "position": {
-        "x": 289.87476604336126,
-        "y": 299.698717022221
+        "x": 92.4199405982074,
+        "y": 508.1623675646435
       },
       "data": {
-        "label": "Nouveau buttonNode"
+        "label": "BAS",
+        "style": {
+          "backgroundColor": "#d32f2f",
+          "color": "white",
+          "hoverBackgroundColor": "#bf1b1b",
+          "fontSize": "1rem",
+          "variant": "solid"
+        }
       },
       "width": 222,
-      "height": 172,
+      "height": 144,
       "selected": false,
       "positionAbsolute": {
-        "x": 289.87476604336126,
-        "y": 299.698717022221
+        "x": 92.4199405982074,
+        "y": 508.1623675646435
       },
       "dragging": false
+    },
+    {
+      "id": "videoNode-1738184270439",
+      "type": "videoNode",
+      "position": {
+        "x": 391.3333333333333,
+        "y": 315.3333333333333
+      },
+      "data": {
+        "label": "1738165911296-267232651.mp4",
+        "videoUrl": "/uploads/1738165911296-267232651.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 391.3333333333333,
+        "y": 315.3333333333333
+      }
     }
   ],
   "edges": [
     {
-      "source": "videoNode-1738175275347",
+      "source": "videoNode-1738184157753",
       "sourceHandle": null,
-      "target": "buttonNode-1738175283952",
+      "target": "buttonNode-1738184160347",
       "targetHandle": null,
-      "id": "evideoNode-1738175275347-buttonNode-1738175283952",
+      "id": "evideoNode-1738184157753-buttonNode-1738184160347",
       "animated": true
     },
     {
-      "source": "videoNode-1738175275347",
+      "source": "buttonNode-1738184160347",
       "sourceHandle": null,
-      "target": "buttonNode-1738175303195",
+      "target": "videoNode-1738184207558",
       "targetHandle": null,
-      "id": "evideoNode-1738175275347-buttonNode-1738175303195",
+      "id": "ebuttonNode-1738184160347-videoNode-1738184207558",
       "animated": true
     },
     {
-      "source": "buttonNode-1738175303195",
+      "source": "buttonNode-1738184219847",
       "sourceHandle": null,
-      "target": "videoNode-1738175294160",
+      "target": "videoNode-1738184270439",
       "targetHandle": null,
-      "id": "ebuttonNode-1738175303195-videoNode-1738175294160",
+      "id": "ebuttonNode-1738184219847-videoNode-1738184270439",
       "animated": true
     },
     {
-      "source": "buttonNode-1738175283952",
+      "source": "videoNode-1738184157753",
       "sourceHandle": null,
-      "target": "videoNode-1738175296207",
+      "target": "buttonNode-1738184219847",
       "targetHandle": null,
-      "id": "ebuttonNode-1738175283952-videoNode-1738175296207",
+      "id": "evideoNode-1738184157753-buttonNode-1738184219847",
       "animated": true
     }
   ],
   "version": "1.0",
-  "created": "2025-01-29T18:29:13.645Z"
+  "created": "2025-01-29T21:00:08.301Z"
 }

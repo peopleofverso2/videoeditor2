@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Button, Tooltip, IconButton } from '@mui/material';
+import { Dialog, Button, Tooltip, IconButton } from '@mui/material';
 import { Close, Fullscreen, FullscreenExit, PlayArrow, Pause, Help } from '@mui/icons-material';
 
 const API_URL = 'http://localhost:4000';
@@ -205,33 +205,39 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
   };
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={onClose}
-      aria-labelledby="preview-modal"
-      disableEnforceFocus
-      disableAutoFocus
+      maxWidth="xl"
+      fullWidth
+      aria-labelledby="preview-dialog-title"
       keepMounted={false}
+      disablePortal={false}
+      container={() => document.body}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        '& .MuiDialog-paper': {
+          margin: 0,
+          maxWidth: 'none',
+          width: isFullscreen ? '100vw' : '90vw',
+          height: isFullscreen ? '100vh' : '90vh',
+          backgroundColor: 'black',
+        }
       }}
     >
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
+        id="preview-dialog-title"
         style={{
-          backgroundColor: 'black',
-          width: isFullscreen ? '100vw' : '90vw',
-          height: isFullscreen ? '100vh' : '90vh',
+          width: '100%',
+          height: '100%',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          outline: 'none', // Pour éviter le contour de focus par défaut
+          outline: 'none',
         }}
       >
         <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000 }}>
@@ -348,64 +354,70 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
                     .filter(edge => edge.source === currentNode.id)
                     .map((edge, index) => {
                       const targetNode = nodes.find(n => n.id === edge.target);
+                      const buttonStyle = getButtonStyle(targetNode.data.style || {});
                       return (
-                        <Tooltip key={edge.id} title={`Appuyez sur ${index + 1}`}>
-                          <Button
-                            onClick={() => handleNodeClick(targetNode)}
-                            variant="contained"
-                            disableElevation
-                            sx={{
-                              ...getButtonStyle(targetNode.data.style || {}),
-                              width: '100%',
-                              height: '100%',
-                              minHeight: '60px',
-                              fontSize: isFullscreen ? '1.3rem' : '1.1rem',
-                              padding: isFullscreen ? '16px 24px' : '12px 20px',
-                              display: 'flex',
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'flex-start',
-                              textAlign: 'left',
-                              whiteSpace: 'normal',
-                              lineHeight: 1.4,
-                              textTransform: 'none',
-                              '&.MuiButton-root': {
-                                '&:hover': {
-                                  backgroundColor: (targetNode.data.style?.hoverBackgroundColor || '#1565c0') + ' !important',
-                                  transform: 'scale(1.02)',
-                                }
-                              },
-                              '&:hover .choice-number': {
-                                backgroundColor: 'rgba(255,255,255,0.2)',
-                              },
-                            }}
-                          >
-                            <span 
-                              className="choice-number"
-                              style={{ 
-                                marginRight: '15px', 
-                                opacity: 0.8,
-                                fontSize: '0.9em',
-                                backgroundColor: 'rgba(255,255,255,0.15)',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                minWidth: '28px',
-                                textAlign: 'center',
-                                transition: 'all 0.2s ease-in-out',
-                                fontWeight: 'bold',
+                        <span key={edge.id}>
+                          <Tooltip title={`Appuyez sur ${index + 1}`}>
+                            <Button
+                              onClick={() => handleNodeClick(targetNode)}
+                              variant="contained"
+                              disableElevation
+                              sx={{
+                                ...buttonStyle,
+                                width: '100%',
+                                height: '100%',
+                                minHeight: '60px',
+                                fontSize: isFullscreen ? '1.3rem' : '1.1rem',
+                                padding: isFullscreen ? '16px 24px' : '12px 20px',
+                                display: 'flex',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                                textAlign: 'left',
+                                whiteSpace: 'normal',
+                                lineHeight: 1.4,
+                                textTransform: 'none',
+                                '&.MuiButton-root': {
+                                  backgroundColor: buttonStyle.backgroundColor,
+                                  color: buttonStyle.color,
+                                  '&:hover': {
+                                    backgroundColor: buttonStyle.hoverBackgroundColor,
+                                    transform: 'scale(1.02)',
+                                  }
+                                },
+                                '&:hover .choice-number': {
+                                  backgroundColor: 'rgba(255,255,255,0.2)',
+                                },
                               }}
                             >
-                              {index + 1}
-                            </span>
-                            <span style={{ 
-                              flex: 1,
-                              fontWeight: 500,
-                              letterSpacing: '0.3px'
-                            }}>
-                              {targetNode.data.label || 'Continuer'}
-                            </span>
-                          </Button>
-                        </Tooltip>
+                              <span 
+                                className="choice-number"
+                                style={{ 
+                                  marginRight: '15px', 
+                                  opacity: 0.8,
+                                  fontSize: '0.9em',
+                                  backgroundColor: 'rgba(255,255,255,0.15)',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  minWidth: '28px',
+                                  textAlign: 'center',
+                                  transition: 'all 0.2s ease-in-out',
+                                  fontWeight: 'bold',
+                                }}
+                              >
+                                {index + 1}
+                              </span>
+                              <span style={{ 
+                                flex: 1,
+                                fontWeight: 500,
+                                letterSpacing: '0.3px',
+                                fontSize: buttonStyle.fontSize
+                              }}>
+                                {targetNode.data.label || 'Continuer'}
+                              </span>
+                            </Button>
+                          </Tooltip>
+                        </span>
                       );
                     })}
                 </div>
@@ -414,6 +426,6 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
           </div>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
