@@ -1,0 +1,136 @@
+{
+  "nodes": [
+    {
+      "id": "videoNode-1738175275347",
+      "type": "videoNode",
+      "position": {
+        "x": -93.88805168996802,
+        "y": 71.5445601615192
+      },
+      "data": {
+        "label": "1738165895362-698342381.mp4",
+        "videoUrl": "/uploads/1738165895362-698342381.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -93.88805168996802,
+        "y": 71.5445601615192
+      },
+      "dragging": false
+    },
+    {
+      "id": "buttonNode-1738175283952",
+      "type": "buttonNode",
+      "position": {
+        "x": 309.3333333333333,
+        "y": 60
+      },
+      "data": {
+        "label": "Nouveau buttonNode"
+      },
+      "width": 222,
+      "height": 172,
+      "positionAbsolute": {
+        "x": 309.3333333333333,
+        "y": 60
+      }
+    },
+    {
+      "id": "videoNode-1738175294160",
+      "type": "videoNode",
+      "position": {
+        "x": 607.8342691598884,
+        "y": 141.0703556140909
+      },
+      "data": {
+        "label": "1738167348886-557143454.mp4",
+        "videoUrl": "/uploads/1738167348886-557143454.mp4"
+      },
+      "width": 302,
+      "height": 244,
+      "selected": true,
+      "positionAbsolute": {
+        "x": 607.8342691598884,
+        "y": 141.0703556140909
+      },
+      "dragging": false
+    },
+    {
+      "id": "videoNode-1738175296207",
+      "type": "videoNode",
+      "position": {
+        "x": 676.4133266427082,
+        "y": -177.4958551086316
+      },
+      "data": {
+        "label": "1738165930376-654104051.mp4",
+        "videoUrl": "/uploads/1738165930376-654104051.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 676.4133266427082,
+        "y": -177.4958551086316
+      },
+      "dragging": false
+    },
+    {
+      "id": "buttonNode-1738175303195",
+      "type": "buttonNode",
+      "position": {
+        "x": 289.87476604336126,
+        "y": 299.698717022221
+      },
+      "data": {
+        "label": "Nouveau buttonNode"
+      },
+      "width": 222,
+      "height": 172,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 289.87476604336126,
+        "y": 299.698717022221
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "videoNode-1738175275347",
+      "sourceHandle": null,
+      "target": "buttonNode-1738175283952",
+      "targetHandle": null,
+      "id": "evideoNode-1738175275347-buttonNode-1738175283952",
+      "animated": true
+    },
+    {
+      "source": "videoNode-1738175275347",
+      "sourceHandle": null,
+      "target": "buttonNode-1738175303195",
+      "targetHandle": null,
+      "id": "evideoNode-1738175275347-buttonNode-1738175303195",
+      "animated": true
+    },
+    {
+      "source": "buttonNode-1738175303195",
+      "sourceHandle": null,
+      "target": "videoNode-1738175294160",
+      "targetHandle": null,
+      "id": "ebuttonNode-1738175303195-videoNode-1738175294160",
+      "animated": true
+    },
+    {
+      "source": "buttonNode-1738175283952",
+      "sourceHandle": null,
+      "target": "videoNode-1738175296207",
+      "targetHandle": null,
+      "id": "ebuttonNode-1738175283952-videoNode-1738175296207",
+      "animated": true
+    }
+  ],
+  "version": "1.0",
+  "created": "2025-01-29T18:29:13.645Z"
+}
