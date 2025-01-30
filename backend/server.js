@@ -12,17 +12,13 @@ const __dirname = dirname(__filename);
 const app = express();
 const port = 4000;
 
-// Configuration CORS plus permissive
+// Configuration CORS
 app.use(cors({
   origin: function(origin, callback) {
-    // Autoriser les requêtes sans origine (comme les appels API directs)
     if (!origin) return callback(null, true);
-    
-    // Autoriser localhost sur n'importe quel port
     if (origin.match(/^http:\/\/localhost:[0-9]+$/)) {
       return callback(null, true);
     }
-
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -31,54 +27,84 @@ app.use(cors({
 
 app.use(express.json());
 
-// Configuration de multer pour l'upload de fichiers
+// Chemins des fichiers
+const uploadsDir = path.join(__dirname, 'uploads');
+const dataFile = path.join(__dirname, 'data', 'videos.json');
+
+// Assurer que les répertoires existent
+async function ensureDirectories() {
+  try {
+    await fs.access(uploadsDir);
+  } catch {
+    await fs.mkdir(uploadsDir, { recursive: true });
+  }
+  try {
+    await fs.access(path.dirname(dataFile));
+  } catch {
+    await fs.mkdir(path.dirname(dataFile), { recursive: true });
+  }
+}
+
+// Charger les métadonnées des vidéos
+async function loadVideoData() {
+  try {
+    const data = await fs.readFile(dataFile, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return { videos: [] };
+  }
+}
+
+// Sauvegarder les métadonnées des vidéos
+async function saveVideoData(data) {
+  await fs.writeFile(dataFile, JSON.stringify(data, null, 2));
+}
+
+// Configuration de multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'uploads'));
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
 
 const upload = multer({ storage: storage });
 
 // Servir les fichiers statiques
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
 
-// Lister les médias
+// Lister les vidéos
 app.get('/api/media/list', async (req, res) => {
   try {
-    const uploadsDir = path.join(__dirname, 'uploads');
+    await ensureDirectories();
+    const data = await loadVideoData();
     
-    try {
-      await fs.access(uploadsDir);
-    } catch {
-      await fs.mkdir(uploadsDir, { recursive: true });
+    // Si pas de données dans le fichier JSON, scanner le dossier
+    if (data.videos.length === 0) {
+      const files = await fs.readdir(uploadsDir);
+      const videoFiles = await Promise.all(
+        files
+          .filter(file => ['.mp4', '.webm', '.ogg', '.mov'].includes(path.extname(file).toLowerCase()))
+          .map(async (filename) => {
+            const stats = await fs.stat(path.join(uploadsDir, filename));
+            return {
+              id: path.parse(filename).name,
+              name: filename,
+              path: `/uploads/${filename}`,
+              size: stats.size,
+              createdAt: stats.birthtime,
+              tags: []
+            };
+          })
+      );
+      data.videos = videoFiles;
+      await saveVideoData(data);
     }
     
-    const files = await fs.readdir(uploadsDir);
-
-    const mediaFiles = await Promise.all(
-      files.map(async (filename) => {
-        const filePath = path.join(uploadsDir, filename);
-        const stats = await fs.stat(filePath);
-        return {
-          name: filename,
-          path: `/uploads/${filename}`,
-          size: stats.size,
-          createdAt: stats.birthtime,
-        };
-      })
-    );
-    
-    // Ne renvoyer que les vidéos dans la liste
-    const videoFiles = mediaFiles.filter(file => {
-      const ext = path.extname(file.name).toLowerCase();
-      return ['.mp4', '.webm', '.ogg', '.mov'].includes(ext);
-    });
-    
-    res.json(videoFiles);
+    res.json(data.videos);
   } catch (error) {
     console.error('Erreur lors de la lecture des médias:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des vidéos' });
@@ -91,14 +117,85 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier uploadé' });
     }
-    res.json({
+
+    const data = await loadVideoData();
+    const newVideo = {
+      id: path.parse(req.file.filename).name,
       name: req.file.filename,
       path: `/uploads/${req.file.filename}`,
       size: req.file.size,
-    });
+      createdAt: new Date(),
+      tags: []
+    };
+
+    data.videos.push(newVideo);
+    await saveVideoData(data);
+
+    res.json(newVideo);
   } catch (error) {
     console.error('Erreur lors de l\'upload:', error);
     res.status(500).json({ error: 'Erreur lors de l\'upload du fichier' });
+  }
+});
+
+// Mettre à jour les tags d'une vidéo
+app.put('/api/media/:id/tags', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tags } = req.body;
+
+    if (!Array.isArray(tags)) {
+      return res.status(400).json({ error: 'Les tags doivent être un tableau' });
+    }
+
+    const data = await loadVideoData();
+    const videoIndex = data.videos.findIndex(v => v.id === id);
+
+    if (videoIndex === -1) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    data.videos[videoIndex].tags = tags;
+    await saveVideoData(data);
+
+    res.json(data.videos[videoIndex]);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des tags:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des tags' });
+  }
+});
+
+// Supprimer une vidéo
+app.delete('/api/media/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = await loadVideoData();
+    
+    const videoIndex = data.videos.findIndex(v => v.id === id);
+    if (videoIndex === -1) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    const video = data.videos[videoIndex];
+    const filePath = path.join(uploadsDir, video.name);
+
+    // Vérifier si le fichier existe
+    try {
+      await fs.access(filePath);
+      // Supprimer le fichier physique
+      await fs.unlink(filePath);
+    } catch (error) {
+      console.warn(`Le fichier ${filePath} n'existe pas ou ne peut pas être supprimé`);
+    }
+
+    // Supprimer l'entrée de la base de données
+    data.videos.splice(videoIndex, 1);
+    await saveVideoData(data);
+
+    res.json({ success: true, message: 'Vidéo supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de la vidéo' });
   }
 });
 
