@@ -19,6 +19,9 @@ import {
   CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 
+// Définir l'URL de l'API en fonction de l'environnement
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 export default function MediaLibrary({ open, onClose, onSelect }) {
   const [videos, setVideos] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -27,7 +30,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
 
   const fetchVideos = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/media/list');
+      const response = await fetch(`${API_URL}/api/media/list`);
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des vidéos');
       }
@@ -56,13 +59,14 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
       formData.append('file', file);
 
       try {
-        const response = await fetch('http://localhost:4000/api/media/upload', {
+        const response = await fetch(`${API_URL}/api/upload`, {
           method: 'POST',
           body: formData,
         });
 
         if (!response.ok) {
-          throw new Error('Erreur lors de l\'upload');
+          const error = await response.text();
+          throw new Error(`Erreur lors de l'upload: ${error}`);
         }
 
         const uploadedVideo = await response.json();
@@ -157,8 +161,8 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
         )}
 
         <Grid container spacing={2}>
-          {videos.map((video) => (
-            <Grid item xs={12} sm={6} md={4} key={video.path}>
+          {videos.map((video, index) => (
+            <Grid item xs={12} sm={6} md={4} key={`${video.path}-${index}`}>
               <Card
                 sx={{
                   cursor: 'pointer',
@@ -172,7 +176,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
               >
                 <CardMedia
                   component="video"
-                  src={`http://localhost:4000${video.path}`}
+                  src={`${API_URL}${video.path}`}
                   sx={{ height: 140 }}
                 />
                 <CardContent>

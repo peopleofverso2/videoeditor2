@@ -12,26 +12,36 @@ const __dirname = dirname(__filename);
 const app = express();
 const port = 4000;
 
-// Configuration CORS
-app.use(cors());
+// Configuration CORS plus permissive
+app.use(cors({
+  origin: function(origin, callback) {
+    // Autoriser les requêtes sans origine (comme les appels API directs)
+    if (!origin) return callback(null, true);
+    
+    // Autoriser localhost sur n'importe quel port
+    if (origin.match(/^http:\/\/localhost:[0-9]+$/)) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
-// Configuration de Multer pour l'upload de fichiers
+// Configuration de multer pour l'upload de fichiers
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     cb(null, path.join(__dirname, 'uploads'));
   },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname);
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB
-  }
-});
+const upload = multer({ storage: storage });
 
 // Servir les fichiers statiques
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -48,6 +58,7 @@ app.get('/api/media/list', async (req, res) => {
     }
     
     const files = await fs.readdir(uploadsDir);
+
     const mediaFiles = await Promise.all(
       files.map(async (filename) => {
         const filePath = path.join(uploadsDir, filename);
@@ -74,29 +85,27 @@ app.get('/api/media/list', async (req, res) => {
   }
 });
 
-// Upload de fichiers (accepte tous les types)
-app.post('/api/upload', upload.single('file'), (req, res) => {
+// Upload de fichier
+app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Aucun fichier uploadé' });
     }
-    res.json({ path: `/uploads/${req.file.filename}` });
+    res.json({
+      name: req.file.filename,
+      path: `/uploads/${req.file.filename}`,
+      size: req.file.size,
+    });
   } catch (error) {
     console.error('Erreur lors de l\'upload:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Erreur lors de l\'upload du fichier' });
   }
 });
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {
   console.error('Erreur:', err);
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Fichier trop volumineux (max 500MB)' });
-    }
-    return res.status(400).json({ error: err.message });
-  }
-  res.status(500).json({ error: err.message || 'Erreur serveur' });
+  res.status(500).json({ error: 'Erreur serveur' });
 });
 
 app.listen(port, () => {
