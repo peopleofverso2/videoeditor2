@@ -1,0 +1,16 @@
+{
+  "availableTags": [
+    "À valider",
+    "Montage terminé",
+    "En cours",
+    "À revoir"
+  ],
+  "videos": {
+    "list": {
+      "tags": [
+        "À valider"
+      ],
+      "description": ""
+    }
+  }
+}

@@ -16,13 +16,18 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3014',
     methods: ['GET', 'POST']
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3014',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Accept'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Servir les fichiers uploadés

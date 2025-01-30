@@ -6,9 +6,19 @@ import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import UploadIcon from '@mui/icons-material/Upload';
 import NodeEditor from './components/NodeEditor';
 import Player from './components/Player';
-import { ReactFlowProvider } from 'reactflow';
+import ReactFlow, { 
+  ReactFlowProvider, 
+  applyNodeChanges, 
+  applyEdgeChanges,
+  addEdge
+} from 'reactflow';
 import { exportToPOVWithMedia, exportProjectWithMedia, importProjectFromZip } from './services/exportService';
+import VideoNode from './components/VideoNode';
 import 'reactflow/dist/style.css';
+
+const nodeTypes = {
+  videoNode: VideoNode
+};
 
 function App() {
   const [nodes, setNodes] = useState([]);
@@ -71,17 +81,20 @@ function App() {
     event.target.value = '';
   };
 
-  const onNodesChange = useCallback((changes) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  }, []);
+  const onNodesChange = useCallback(
+    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    []
+  );
 
-  const onEdgesChange = useCallback((changes) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-  }, []);
+  const onEdgesChange = useCallback(
+    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
+  );
 
-  const onConnect = useCallback((connection) => {
-    setEdges((eds) => addEdge(connection, eds));
-  }, []);
+  const onConnect = useCallback(
+    (params) => setEdges((eds) => addEdge(params, eds)),
+    []
+  );
 
   const handleSave = useCallback(() => {
     const data = { nodes, edges, startNodeId };

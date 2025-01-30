@@ -1,136 +1,140 @@
 {
   "nodes": [
     {
-      "id": "videoNode-1738175275347",
+      "id": "buttonNode-1738255814248",
+      "type": "buttonNode",
+      "position": {
+        "x": 47.192481547689084,
+        "y": 50.45904473740049
+      },
+      "data": {
+        "label": "Nouveau buttonNode",
+        "style": {
+          "color": "#000000"
+        }
+      },
+      "width": 222,
+      "height": 172,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 47.192481547689084,
+        "y": 50.45904473740049
+      }
+    },
+    {
+      "id": "buttonNode-1738255965522",
+      "type": "buttonNode",
+      "position": {
+        "x": -145.002620979648,
+        "y": 437.46897721544883
+      },
+      "data": {
+        "label": "Nouveau buttonNode"
+      },
+      "width": 222,
+      "height": 172,
+      "positionAbsolute": {
+        "x": -145.002620979648,
+        "y": 437.46897721544883
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "videoNode-1738255966861",
       "type": "videoNode",
       "position": {
-        "x": -93.88805168996802,
-        "y": 71.5445601615192
+        "x": -323.93950658522635,
+        "y": 108.26290744051116
+      },
+      "data": {
+        "label": "1738164916244-291760058.mp4",
+        "videoUrl": "/uploads/1738164916244-291760058.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "positionAbsolute": {
+        "x": -323.93950658522635,
+        "y": 108.26290744051116
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "videoNode-1738256349470",
+      "type": "videoNode",
+      "position": {
+        "x": 103.78923970630973,
+        "y": 244.99948261522385
       },
       "data": {
         "label": "1738165895362-698342381.mp4",
         "videoUrl": "/uploads/1738165895362-698342381.mp4"
       },
       "width": 302,
-      "height": 240,
-      "selected": false,
+      "height": 244,
+      "selected": true,
+      "dragging": false,
       "positionAbsolute": {
-        "x": -93.88805168996802,
-        "y": 71.5445601615192
-      },
-      "dragging": false
-    },
-    {
-      "id": "buttonNode-1738175283952",
-      "type": "buttonNode",
-      "position": {
-        "x": 309.3333333333333,
-        "y": 60
-      },
-      "data": {
-        "label": "Nouveau buttonNode"
-      },
-      "width": 222,
-      "height": 172,
-      "positionAbsolute": {
-        "x": 309.3333333333333,
-        "y": 60
+        "x": 103.78923970630973,
+        "y": 244.99948261522385
       }
     },
     {
-      "id": "videoNode-1738175294160",
+      "id": "videoNode-1738256375261",
       "type": "videoNode",
       "position": {
-        "x": 607.8342691598884,
-        "y": 141.0703556140909
+        "x": 106.85028456162686,
+        "y": 505.2237970803956
       },
       "data": {
-        "label": "1738167348886-557143454.mp4",
-        "videoUrl": "/uploads/1738167348886-557143454.mp4"
-      },
-      "width": 302,
-      "height": 244,
-      "selected": true,
-      "positionAbsolute": {
-        "x": 607.8342691598884,
-        "y": 141.0703556140909
-      },
-      "dragging": false
-    },
-    {
-      "id": "videoNode-1738175296207",
-      "type": "videoNode",
-      "position": {
-        "x": 676.4133266427082,
-        "y": -177.4958551086316
-      },
-      "data": {
-        "label": "1738165930376-654104051.mp4",
-        "videoUrl": "/uploads/1738165930376-654104051.mp4"
+        "videoUrl": "/uploads/bracelet ertouche.mp4"
       },
       "width": 302,
       "height": 240,
       "selected": false,
       "positionAbsolute": {
-        "x": 676.4133266427082,
-        "y": -177.4958551086316
-      },
-      "dragging": false
-    },
-    {
-      "id": "buttonNode-1738175303195",
-      "type": "buttonNode",
-      "position": {
-        "x": 289.87476604336126,
-        "y": 299.698717022221
-      },
-      "data": {
-        "label": "Nouveau buttonNode"
-      },
-      "width": 222,
-      "height": 172,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 289.87476604336126,
-        "y": 299.698717022221
+        "x": 106.85028456162686,
+        "y": 505.2237970803956
       },
       "dragging": false
     }
   ],
   "edges": [
     {
-      "source": "videoNode-1738175275347",
+      "source": "videoNode-1738255966861",
       "sourceHandle": null,
-      "target": "buttonNode-1738175283952",
+      "target": "buttonNode-1738255814248",
       "targetHandle": null,
-      "id": "evideoNode-1738175275347-buttonNode-1738175283952",
+      "id": "evideoNode-1738255966861-buttonNode-1738255814248",
       "animated": true
     },
     {
-      "source": "videoNode-1738175275347",
+      "source": "videoNode-1738255966861",
       "sourceHandle": null,
-      "target": "buttonNode-1738175303195",
+      "target": "buttonNode-1738255965522",
       "targetHandle": null,
-      "id": "evideoNode-1738175275347-buttonNode-1738175303195",
+      "id": "evideoNode-1738255966861-buttonNode-1738255965522",
       "animated": true
     },
     {
-      "source": "buttonNode-1738175303195",
+      "source": "buttonNode-1738255814248",
       "sourceHandle": null,
-      "target": "videoNode-1738175294160",
+      "target": "videoNode-1738256349470",
       "targetHandle": null,
-      "id": "ebuttonNode-1738175303195-videoNode-1738175294160",
+      "id": "ebuttonNode-1738255814248-videoNode-1738256349470",
       "animated": true
     },
     {
-      "source": "buttonNode-1738175283952",
+      "source": "buttonNode-1738255965522",
       "sourceHandle": null,
-      "target": "videoNode-1738175296207",
+      "target": "videoNode-1738256375261",
       "targetHandle": null,
-      "id": "ebuttonNode-1738175283952-videoNode-1738175296207",
+      "id": "ebuttonNode-1738255965522-videoNode-1738256375261",
       "animated": true
     }
   ],
   "version": "1.0",
-  "created": "2025-01-29T18:29:13.645Z"
+  "created": "2025-01-30T17:00:31.468Z"
 }

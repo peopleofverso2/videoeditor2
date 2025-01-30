@@ -33,6 +33,7 @@ import {
   Sort as SortIcon,
   Edit as EditIcon,
   LocalOffer as TagIcon,
+  DriveFileRenameOutline as RenameIcon,
 } from '@mui/icons-material';
 
 // Définir l'URL de l'API en fonction de l'environnement
@@ -49,6 +50,8 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
   const [editingTags, setEditingTags] = useState(null);
   const [newTag, setNewTag] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
+  const [renaming, setRenaming] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
 
   const fetchVideos = useCallback(async () => {
     try {
@@ -237,6 +240,40 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
     }
   };
 
+  const handleRename = async (video) => {
+    if (!newFileName.trim()) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/media/${video.id}/rename`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newName: newFileName.trim() }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors du renommage');
+      }
+
+      const updatedVideo = await response.json();
+      setVideos(prevVideos => 
+        prevVideos.map(v => v.id === video.id ? updatedVideo : v)
+      );
+      setRenaming(null);
+      setNewFileName('');
+    } catch (error) {
+      console.error('Error renaming video:', error);
+      setError(error.message || 'Erreur lors du renommage de la vidéo');
+    }
+  };
+
+  const cancelRenaming = () => {
+    setRenaming(null);
+    setNewFileName('');
+  };
+
   const toggleTagFilter = (tag) => {
     setSelectedTags(prev => 
       prev.includes(tag)
@@ -244,6 +281,13 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
         : [...prev, tag]
     );
   };
+
+  const getDisplayName = useCallback((video) => {
+    // Enlever l'ID du début du nom si présent
+    const name = video.name;
+    const match = name.match(/^[^-]+-(.+)$/);
+    return match ? match[1] : name;
+  }, []);
 
   return (
     <>
@@ -363,7 +407,6 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
               <Grid item xs={12} sm={6} md={4} key={`${video.path}-${index}`}>
                 <Card
                   sx={{
-                    cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     '&:hover': {
                       transform: 'translateY(-4px)',
@@ -372,22 +415,54 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
                     position: 'relative',
                   }}
                 >
-                  <CardMedia
-                    component="video"
-                    src={`${API_URL}${video.path}`}
-                    sx={{ height: 140 }}
-                  />
+                  <Box 
+                    sx={{ 
+                      cursor: 'pointer',
+                      position: 'relative',
+                      '&:hover': {
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                        }
+                      }
+                    }}
+                    onClick={() => handleVideoSelect(video)}
+                  >
+                    <CardMedia
+                      component="video"
+                      src={`${API_URL}${video.path}`}
+                      sx={{ height: 140 }}
+                      onClick={(e) => e.stopPropagation()} // Empêcher la sélection lors du clic sur la vidéo elle-même
+                    />
+                  </Box>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Typography
                         variant="body2"
                         noWrap
-                        sx={{ flex: 1, cursor: 'pointer' }}
-                        onClick={() => handleVideoSelect(video)}
+                        sx={{ flex: 1 }}
                       >
-                        {video.name}
+                        {getDisplayName(video)}
                       </Typography>
                       <Stack direction="row" spacing={1}>
+                        <Tooltip title="Renommer">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenaming(video);
+                              const displayName = getDisplayName(video);
+                              setNewFileName(displayName.replace(/\.[^/.]+$/, ""));
+                            }}
+                          >
+                            <RenameIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Modifier les tags">
                           <IconButton
                             size="small"
@@ -467,6 +542,69 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
             ))}
           </Grid>
         </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de renommage */}
+      <Dialog
+        open={Boolean(renaming)}
+        onClose={() => {
+          setRenaming(null);
+          setNewFileName('');
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Renommer la vidéo</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Nom actuel :
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {renaming ? getDisplayName(renaming) : ''}
+            </Typography>
+            <Typography variant="subtitle2" gutterBottom>
+              Nouveau nom :
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                fullWidth
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                placeholder="Entrez le nouveau nom"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && renaming) {
+                    handleRename(renaming);
+                  } else if (e.key === 'Escape') {
+                    setRenaming(null);
+                    setNewFileName('');
+                  }
+                }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                {renaming ? renaming.name.split('.').pop() : ''}
+              </Typography>
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setRenaming(null);
+              setNewFileName('');
+            }}
+          >
+            Annuler
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => renaming && handleRename(renaming)}
+            disabled={!newFileName.trim()}
+          >
+            Renommer
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Dialogue de confirmation de suppression */}

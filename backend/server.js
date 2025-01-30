@@ -165,6 +165,65 @@ app.put('/api/media/:id/tags', async (req, res) => {
   }
 });
 
+// Route pour renommer une vidéo
+app.put('/api/media/:id/rename', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newName } = req.body;
+
+    if (!newName) {
+      return res.status(400).json({ error: 'Le nouveau nom est requis' });
+    }
+
+    // Charger les métadonnées actuelles
+    const videosData = await loadVideoData();
+    const videoIndex = videosData.videos.findIndex(v => v.id === id);
+
+    if (videoIndex === -1) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    const video = videosData.videos[videoIndex];
+    
+    // Construire le nouveau nom de fichier en gardant l'extension et l'ID
+    const extension = path.extname(video.name);
+    const newFileName = `${id}-${newName}${extension}`;
+    const oldPath = path.join(__dirname, 'uploads', path.basename(video.path));
+    const newPath = path.join(__dirname, 'uploads', newFileName);
+
+    // Vérifier si le nouveau nom n'existe pas déjà
+    if (videosData.videos.some(v => v.name === newFileName && v.id !== id)) {
+      return res.status(400).json({ error: 'Une vidéo avec ce nom existe déjà' });
+    }
+
+    // Renommer le fichier physique
+    try {
+      await fs.rename(oldPath, newPath);
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      if (error.code === 'ENOENT') {
+        return res.status(404).json({ error: 'Fichier non trouvé' });
+      }
+      throw error;
+    }
+
+    // Mettre à jour les métadonnées
+    videosData.videos[videoIndex] = {
+      ...video,
+      name: newFileName,
+      path: `/uploads/${newFileName}`,
+    };
+
+    // Sauvegarder les métadonnées
+    await saveVideoData(videosData);
+
+    res.json(videosData.videos[videoIndex]);
+  } catch (error) {
+    console.error('Error renaming video:', error);
+    res.status(500).json({ error: 'Erreur lors du renommage de la vidéo' });
+  }
+});
+
 // Supprimer une vidéo
 app.delete('/api/media/:id', async (req, res) => {
   try {

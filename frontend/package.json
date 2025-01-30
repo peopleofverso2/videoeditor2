@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emotion/react": "^11.11.3",
-    "@emotion/styled": "^11.11.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^5.15.6",
-    "@mui/material": "^5.15.6",
+    "@mui/lab": "^6.0.0-beta.25",
+    "@mui/material": "^5.16.14",
     "@reactflow/node-resizer": "^2.1.0",
     "dagre": "^0.8.5",
     "file-saver": "^2.0.5",
@@ -29,5 +30,9 @@
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
     "vite": "^5.0.12"
+  },
+  "resolutions": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0"
   }
 }
