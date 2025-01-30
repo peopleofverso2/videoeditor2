@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ThemeProvider, CssBaseline, Box } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box, Typography, TextField, Stack } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import NodeEditor from './components/NodeEditor/NodeEditor';
 import Toolbar from './components/Toolbar/Toolbar';
@@ -20,10 +20,12 @@ const theme = createTheme({
   },
 });
 
-export default function App() {
+function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [projectName, setProjectName] = useState('Nouveau projet');
+  const [isEditingName, setIsEditingName] = useState(false);
   
   // Historique pour undo/redo
   const [history, setHistory] = useState({
@@ -32,7 +34,6 @@ export default function App() {
     future: []
   });
 
-  // Mise à jour de l'historique à chaque changement
   const handleNodesChange = useCallback((changes) => {
     onNodesChange(changes);
     setHistory(prev => ({
@@ -85,20 +86,23 @@ export default function App() {
 
   const handleSave = useCallback(async () => {
     try {
-      await exportProject(nodes, edges);
+      await exportProject(nodes, edges, projectName);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde du projet');
     }
-  }, [nodes, edges]);
+  }, [nodes, edges, projectName]);
 
   const handleImport = useCallback(async (file) => {
     try {
-      const { nodes: importedNodes, edges: importedEdges } = await importProject(file);
+      const { nodes: importedNodes, edges: importedEdges, projectName: importedName } = await importProject(file);
       
       // Mettre à jour l'état
       setNodes(importedNodes);
       setEdges(importedEdges);
+      if (importedName) {
+        setProjectName(importedName);
+      }
       
       // Réinitialiser l'historique
       setHistory({
@@ -119,12 +123,16 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ 
-        height: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column',
-        bgcolor: 'background.default' 
-      }}>
+      <Box 
+        component="main"
+        role="main"
+        sx={{ 
+          height: '100vh', 
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: 'background.default' 
+        }}
+      >
         <Toolbar
           onSave={handleSave}
           onImport={handleImport}
@@ -134,6 +142,65 @@ export default function App() {
           canUndo={history.past.length > 0}
           canRedo={history.future.length > 0}
         />
+
+        <Stack 
+          direction="row" 
+          alignItems="center" 
+          spacing={2}
+          sx={{ 
+            px: 2,
+            py: 0.5,
+            borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+            bgcolor: 'background.paper'
+          }}
+        >
+          {isEditingName ? (
+            <TextField
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onBlur={() => setIsEditingName(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setIsEditingName(false);
+                }
+              }}
+              variant="standard"
+              autoFocus
+              size="small"
+              inputProps={{
+                'aria-label': 'Nom du projet'
+              }}
+              sx={{ 
+                '& .MuiInputBase-input': {
+                  fontSize: '0.875rem',
+                  fontWeight: 500
+                }
+              }}
+            />
+          ) : (
+            <Typography
+              variant="subtitle2"
+              component="button"
+              onClick={() => setIsEditingName(true)}
+              tabIndex={0}
+              role="button"
+              aria-label="Modifier le nom du projet"
+              sx={{ 
+                cursor: 'pointer',
+                color: 'text.secondary',
+                fontWeight: 500,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                '&:hover': {
+                  color: 'primary.main'
+                }
+              }}
+            >
+              {projectName}
+            </Typography>
+          )}
+        </Stack>
         
         <Box sx={{ flexGrow: 1 }}>
           <NodeEditor
@@ -156,3 +223,5 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
+export default App;

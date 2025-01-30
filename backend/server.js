@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -48,10 +49,13 @@ async function ensureDirectories() {
 // Charger les métadonnées des vidéos
 async function loadVideoData() {
   try {
-    const data = await fs.readFile(dataFile, 'utf-8');
+    const data = await fs.readFile(dataFile, 'utf8');
     return JSON.parse(data);
-  } catch {
-    return { videos: [] };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { videos: [] };
+    }
+    throw error;
   }
 }
 
@@ -66,12 +70,50 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueName + ext);
   }
 });
 
 const upload = multer({ storage: storage });
+
+// Streaming de fichiers vidéo
+app.get('/uploads/:filename', async (req, res) => {
+  const filePath = path.join(uploadsDir, req.params.filename);
+  
+  try {
+    const stat = await fs.stat(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      const file = fsSync.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(200, head);
+      fsSync.createReadStream(filePath).pipe(res);
+    }
+  } catch (error) {
+    console.error('Error streaming file:', error);
+    res.status(500).send('Error streaming file');
+  }
+});
 
 // Servir les fichiers statiques
 app.use('/uploads', express.static(uploadsDir));
@@ -255,6 +297,24 @@ app.delete('/api/media/:id', async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la suppression:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression de la vidéo' });
+  }
+});
+
+app.post('/export', express.json(), async (req, res) => {
+  try {
+    const { nodes, edges, projectName } = req.body;
+    const projectData = {
+      projectName: projectName || 'Nouveau projet',
+      nodes,
+      edges,
+      version: '1.0',
+      exportDate: new Date().toISOString()
+    };
+
+    res.json(projectData);
+  } catch (error) {
+    console.error('Erreur lors de l\'export:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'export du projet' });
   }
 });
 
