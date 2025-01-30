@@ -15,8 +15,11 @@ import {
   Redo as RedoIcon,
   Upload as UploadIcon,
   VideoLibrary as VideoLibraryIcon,
-  SmartButton as ButtonIcon
+  SmartButton as ButtonIcon,
+  AddIcon,
+  AutoAwesomeIcon
 } from '@mui/icons-material';
+import { createTablesFatalesTemplate } from '../../services/templateService';
 
 export default function Toolbar({ 
   onSave, 
@@ -120,6 +123,18 @@ export default function Toolbar({
             onChange={handleFileChange}
             style={{ display: 'none' }}
           />
+
+          <Tooltip title="Créer un projet vide">
+            <IconButton onClick={() => {}} size="large">
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Template: Tables Fatales">
+            <IconButton onClick={() => createTablesFatalesTemplate()} size="large">
+              <AutoAwesomeIcon />
+            </IconButton>
+          </Tooltip>
 
           <Tooltip title="Lancer la prévisualisation">
             <IconButton onClick={onPlay} size="large">
