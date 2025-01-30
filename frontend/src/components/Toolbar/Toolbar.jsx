@@ -9,15 +9,15 @@ import {
   Tooltip
 } from '@mui/material';
 import {
-  PlayArrow as PlayIcon,
   Save as SaveIcon,
+  PlayArrow as PlayIcon,
   Undo as UndoIcon,
   Redo as RedoIcon,
   Upload as UploadIcon,
   VideoLibrary as VideoLibraryIcon,
   SmartButton as ButtonIcon,
-  AddIcon,
-  AutoAwesomeIcon
+  Add as AddIcon,
+  AutoAwesome as AutoAwesomeIcon
 } from '@mui/icons-material';
 import { createTablesFatalesTemplate } from '../../services/templateService';
 
