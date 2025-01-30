@@ -20,6 +20,10 @@ import {
   FormControl,
   InputLabel,
   Stack,
+  Chip,
+  Tooltip,
+  Autocomplete,
+  TextField,
 } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -27,6 +31,8 @@ import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Sort as SortIcon,
+  Edit as EditIcon,
+  LocalOffer as TagIcon,
 } from '@mui/icons-material';
 
 // Définir l'URL de l'API en fonction de l'environnement
@@ -40,6 +46,9 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [editingTags, setEditingTags] = useState(null);
+  const [newTag, setNewTag] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
 
   const fetchVideos = useCallback(async () => {
     try {
@@ -63,8 +72,17 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
 
   // Tri des vidéos
   const sortedVideos = useMemo(() => {
-    const sorted = [...videos];
-    sorted.sort((a, b) => {
+    let filtered = [...videos];
+    
+    // Filtrer par tags sélectionnés
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(video => 
+        selectedTags.every(tag => video.tags.includes(tag))
+      );
+    }
+    
+    // Trier
+    filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return sortOrder === 'asc' 
           ? a.name.localeCompare(b.name)
@@ -76,8 +94,17 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
       }
       return 0;
     });
-    return sorted;
-  }, [videos, sortBy, sortOrder]);
+    return filtered;
+  }, [videos, sortBy, sortOrder, selectedTags]);
+
+  // Récupérer tous les tags uniques
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    videos.forEach(video => {
+      video.tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet);
+  }, [videos]);
 
   const onDrop = useCallback(async (acceptedFiles) => {
     if (acceptedFiles?.length > 0) {
@@ -148,6 +175,76 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
     setSortOrder(current => current === 'asc' ? 'desc' : 'asc');
   };
 
+  const handleAddTag = async (videoId, tagToAdd) => {
+    if (!tagToAdd?.trim()) return;
+    
+    try {
+      const video = videos.find(v => v.id === videoId);
+      if (!video) return;
+
+      // Éviter les doublons
+      if (video.tags.includes(tagToAdd.trim())) return;
+
+      const updatedTags = [...video.tags, tagToAdd.trim()];
+      const response = await fetch(`${API_URL}/api/media/${videoId}/tags`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tags: updatedTags }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la mise à jour des tags');
+      }
+
+      const updatedVideo = await response.json();
+      setVideos(prevVideos => 
+        prevVideos.map(v => v.id === videoId ? updatedVideo : v)
+      );
+      setNewTag('');
+    } catch (error) {
+      console.error('Error updating tags:', error);
+      setError('Erreur lors de la mise à jour des tags');
+    }
+  };
+
+  const handleRemoveTag = async (videoId, tagToRemove) => {
+    try {
+      const video = videos.find(v => v.id === videoId);
+      if (!video) return;
+
+      const updatedTags = video.tags.filter(tag => tag !== tagToRemove);
+      const response = await fetch(`${API_URL}/api/media/${videoId}/tags`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tags: updatedTags }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la mise à jour des tags');
+      }
+
+      const updatedVideo = await response.json();
+      setVideos(prevVideos => 
+        prevVideos.map(v => v.id === videoId ? updatedVideo : v)
+      );
+    } catch (error) {
+      console.error('Error updating tags:', error);
+      setError('Erreur lors de la mise à jour des tags');
+    }
+  };
+
+  const toggleTagFilter = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
   return (
     <>
       <Dialog
@@ -215,27 +312,50 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
             </Box>
           )}
 
-          {/* Options de tri */}
-          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Trier par</InputLabel>
-              <Select
-                value={sortBy}
-                label="Trier par"
-                onChange={(e) => setSortBy(e.target.value)}
+          {/* Filtres et tri */}
+          <Stack spacing={2} sx={{ mb: 3 }}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Trier par</InputLabel>
+                <Select
+                  value={sortBy}
+                  label="Trier par"
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <MenuItem value="name">Nom</MenuItem>
+                  <MenuItem value="date">Date</MenuItem>
+                </Select>
+              </FormControl>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={toggleSortOrder}
+                startIcon={<SortIcon />}
               >
-                <MenuItem value="name">Nom</MenuItem>
-                <MenuItem value="date">Date</MenuItem>
-              </Select>
-            </FormControl>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={toggleSortOrder}
-              startIcon={<SortIcon />}
-            >
-              {sortOrder === 'asc' ? 'Croissant' : 'Décroissant'}
-            </Button>
+                {sortOrder === 'asc' ? 'Croissant' : 'Décroissant'}
+              </Button>
+            </Stack>
+
+            {/* Tags disponibles */}
+            {allTags.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Filtrer par tags :
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {allTags.map(tag => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      onClick={() => toggleTagFilter(tag)}
+                      color={selectedTags.includes(tag) ? "primary" : "default"}
+                      size="small"
+                      icon={<TagIcon />}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            )}
           </Stack>
 
           <Grid container spacing={2}>
@@ -258,7 +378,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
                     sx={{ height: 140 }}
                   />
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Typography
                         variant="body2"
                         noWrap
@@ -267,17 +387,80 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
                       >
                         {video.name}
                       </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirmation(video);
-                        }}
-                        sx={{ ml: 1 }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      <Stack direction="row" spacing={1}>
+                        <Tooltip title="Modifier les tags">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTags(video.id);
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Supprimer">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmation(video);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </Box>
+
+                    {/* Tags de la vidéo */}
+                    <Box sx={{ mt: 1 }}>
+                      {video.tags.map(tag => (
+                        <Chip
+                          key={tag}
+                          label={tag}
+                          size="small"
+                          onDelete={() => handleRemoveTag(video.id, tag)}
+                          sx={{ mr: 0.5, mb: 0.5 }}
+                        />
+                      ))}
+                    </Box>
+
+                    {/* Interface d'édition des tags */}
+                    {editingTags === video.id && (
+                      <Box sx={{ mt: 1 }}>
+                        <Stack direction="row" spacing={1}>
+                          <Autocomplete
+                            freeSolo
+                            size="small"
+                            options={allTags.filter(tag => !video.tags.includes(tag))}
+                            value={newTag}
+                            onChange={(event, newValue) => {
+                              if (newValue) {
+                                handleAddTag(video.id, newValue);
+                              }
+                            }}
+                            onInputChange={(event, newInputValue) => {
+                              setNewTag(newInputValue);
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                size="small"
+                                placeholder="Nouveau tag"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && newTag) {
+                                    e.preventDefault();
+                                    handleAddTag(video.id, newTag);
+                                  }
+                                }}
+                              />
+                            )}
+                            sx={{ minWidth: 200 }}
+                          />
+                        </Stack>
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>
