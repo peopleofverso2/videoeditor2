@@ -4,7 +4,7 @@ import config from '../config';
 
 const API_URL = config.apiUrl;
 
-export async function exportProject(nodes, edges) {
+async function exportProjectInternal(nodes, edges) {
   try {
     const zip = new JSZip();
     
@@ -52,12 +52,13 @@ export async function exportProject(nodes, edges) {
   }
 }
 
-export const exportProjectWithMedia = async (project) => {
+const exportProject = exportProjectInternal;
+const exportProjectWithMedia = async (project) => {
   const { nodes, edges } = project;
-  return exportProject(nodes, edges);
+  return exportProjectInternal(nodes, edges);
 };
 
-export async function importProject(file) {
+async function importProject(file) {
   try {
     console.log('Début de l\'import du projet:', file.name);
     
@@ -142,3 +143,9 @@ export async function importProject(file) {
     throw error;
   }
 }
+
+export {
+  exportProject,
+  exportProjectWithMedia,
+  importProject
+};
