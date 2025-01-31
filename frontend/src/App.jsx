@@ -16,7 +16,7 @@ import MembersManager from './components/Collaboration/MembersManager';
 import ProjectSelector from './components/Project/ProjectSelector';
 import MediaLibrary from './components/MediaLibrary/MediaLibrary';
 import { useNodesState, useEdgesState } from 'reactflow';
-import { exportProject, importProject } from './services/exportService';
+import { exportProject, importProject } from './services/export'; // Corriger l'importation de exportService
 import { ReactFlowProvider } from 'reactflow';
 import { API_URL } from './constants/api';
 import 'reactflow/dist/style.css';
