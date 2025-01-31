@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import { 
   ThemeProvider, 
   CssBaseline, 
@@ -6,30 +6,30 @@ import {
   IconButton, 
   Drawer,
   Container
-} from '@mui/material';
-import { createTheme } from '@mui/material/styles';
-import { Group as GroupIcon } from '@mui/icons-material';
-import NodeEditor from './components/NodeEditor/NodeEditor';
-import Toolbar from './components/Toolbar/Toolbar';
-import PreviewModal from './components/Preview/PreviewModal';
-import MembersManager from './components/Collaboration/MembersManager';
-import ProjectSelector from './components/Project/ProjectSelector';
-import MediaLibrary from './components/MediaLibrary/MediaLibrary';
-import VideoNode from './components/VideoNode';
-import { useNodesState, useEdgesState, ReactFlowProvider } from 'reactflow';
-import { exportProject, exportProjectWithMedia, importProject } from './services/exportService';
-import { API_URL } from './constants/api';
-import 'reactflow/dist/style.css';
+} from "@mui/material";
+import { createTheme } from "@mui/material/styles";
+import { Group as GroupIcon } from "@mui/icons-material";
+import NodeEditor from "./components/NodeEditor/NodeEditor";
+import Toolbar from "./components/Toolbar/Toolbar";
+import PreviewModal from "./components/Preview/PreviewModal";
+import MembersManager from "./components/Collaboration/MembersManager";
+import ProjectSelector from "./components/Project/ProjectSelector";
+import MediaLibrary from "./components/MediaLibrary/MediaLibrary";
+import VideoNode from "./components/VideoNode";
+import { useNodesState, useEdgesState, ReactFlowProvider } from "reactflow";
+import { exportProject, exportProjectWithMedia, importProject } from "./services/exportService";
+import { API_URL } from "./constants/api";
+import "reactflow/dist/style.css";
 
 // Création du thème
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: "light",
     primary: {
-      main: '#1976d2',
+      main: "#1976d2",
     },
     secondary: {
-      main: '#dc004e',
+      main: "#dc004e",
     },
   },
 });
@@ -39,7 +39,7 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]); 
   const [openMembers, setOpenMembers] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState(null);
-  const [currentProjectName, setCurrentProjectName] = useState('');
+  const [currentProjectName, setCurrentProjectName] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [history, setHistory] = useState({
@@ -101,15 +101,15 @@ export default function App() {
 
   const handleSave = useCallback(async () => {
     if (!currentProjectId) {
-      console.error('Aucun projet sélectionné');
+      console.error("Aucun projet sélectionné");
       return;
     }
 
     try {
       const response = await fetch(`${API_URL}/projects/${currentProjectId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           nodes,
@@ -118,13 +118,13 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de la sauvegarde');
+        throw new Error("Erreur lors de la sauvegarde");
       }
 
-      console.log('Projet sauvegardé avec succès');
+      console.log("Projet sauvegardé avec succès");
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde du projet');
+      console.error("Erreur lors de la sauvegarde:", error);
+      alert("Erreur lors de la sauvegarde du projet");
     }
   }, [currentProjectId, nodes, edges]);
 
@@ -143,8 +143,8 @@ export default function App() {
         future: []
       });
     } catch (error) {
-      console.error('Erreur lors de l\'import:', error);
-      alert('Erreur lors de l\'import du projet');
+      console.error("Erreur lors de l'import:", error);
+      alert("Erreur lors de l'import du projet");
     }
   }, [setNodes, setEdges, setHistory]);
 
@@ -155,7 +155,7 @@ export default function App() {
   const handleProjectSelect = async (projectId) => {
     try {
       const response = await fetch(`${API_URL}/projects/${projectId}`);
-      if (!response.ok) throw new Error('Erreur lors du chargement du projet');
+      if (!response.ok) throw new Error("Erreur lors du chargement du projet");
       
       const project = await response.json();
       setNodes(project.nodes || []);
@@ -170,8 +170,8 @@ export default function App() {
         future: []
       });
     } catch (error) {
-      console.error('Erreur lors du chargement du projet:', error);
-      alert('Erreur lors du chargement du projet');
+      console.error("Erreur lors du chargement du projet:", error);
+      alert("Erreur lors du chargement du projet");
     }
   };
 
@@ -180,9 +180,9 @@ export default function App() {
     if (currentProjectId) {
       try {
         const response = await fetch(`${API_URL}/projects/${currentProjectId}`, {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             nodes,
@@ -191,14 +191,14 @@ export default function App() {
         });
 
         if (!response.ok) {
-          throw new Error('Erreur lors de la sauvegarde');
+          throw new Error("Erreur lors de la sauvegarde");
         }
 
-        console.log('Projet sauvegardé avant de retourner à la liste');
+        console.log("Projet sauvegardé avant de retourner à la liste");
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
+        console.error("Erreur lors de la sauvegarde:", error);
         const shouldContinue = window.confirm(
-          'Erreur lors de la sauvegarde du projet. Voulez-vous quand même retourner à la liste des projets ?'
+          "Erreur lors de la sauvegarde du projet. Voulez-vous quand même retourner à la liste des projets ?"
         );
         if (!shouldContinue) {
           return;
@@ -208,7 +208,7 @@ export default function App() {
 
     // Réinitialiser l'état
     setCurrentProjectId(null);
-    setCurrentProjectName('');
+    setCurrentProjectName("");
     setNodes([]);
     setEdges([]);
     setHistory({
@@ -222,7 +222,7 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ReactFlowProvider>
-        <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
           {!currentProjectId ? (
             <Container>
               <Box sx={{ mt: 4 }}>
@@ -245,7 +245,7 @@ export default function App() {
                 onOpenLibrary={() => setLibraryOpen(true)}
               />
 
-              <Box sx={{ flexGrow: 1, position: 'relative' }}>
+              <Box sx={{ flexGrow: 1, position: "relative" }}>
                 <NodeEditor
                   nodes={nodes}
                   edges={edges}
@@ -279,8 +279,8 @@ export default function App() {
                 onClose={() => setOpenMembers(false)}
                 PaperProps={{
                   sx: {
-                    width: { xs: '100%', sm: 400 },
-                    maxWidth: '100%'
+                    width: { xs: "100%", sm: 400 },
+                    maxWidth: "100%"
                   }
                 }}
               >
@@ -291,15 +291,15 @@ export default function App() {
               </Drawer>
 
               {/* Bouton de gestion des membres */}
-              <Box sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1000 }}>
+              <Box sx={{ position: "fixed", right: 20, bottom: 20, zIndex: 1000 }}>
                 <IconButton
                   color="primary"
                   onClick={() => setOpenMembers(true)}
                   sx={{
-                    backgroundColor: 'white',
+                    backgroundColor: "white",
                     boxShadow: 2,
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 255, 255, 0.9)",
                     }
                   }}
                 >
