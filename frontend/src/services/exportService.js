@@ -52,8 +52,8 @@ export async function exportProject(nodes, edges) {
 }
 
 export const exportProjectWithMedia = async (project) => {
-  // Implementation
-  return exportToPOVWithMedia(project);
+  const { nodes, edges } = project;
+  return exportProject(nodes, edges);
 };
 
 export async function importProject(file) {
