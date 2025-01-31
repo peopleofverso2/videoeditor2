@@ -54,26 +54,28 @@ export const getProject = async (req, res) => {
 // Mettre à jour un projet
 export const updateProject = async (req, res) => {
   try {
-    console.log('Mise à jour du projet:', req.params.id, req.body);
-    const { name, description, nodes, edges } = req.body;
-    const project = await Project.findById(req.params.id);
-    
+    const { id } = req.params;
+    const { nodes, edges, screenshot } = req.body;
+
+    const project = await Project.findByIdAndUpdate(
+      id,
+      { 
+        nodes, 
+        edges,
+        screenshot,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+
     if (!project) {
-      console.log('Projet non trouvé:', req.params.id);
       return res.status(404).json({ message: 'Projet non trouvé' });
     }
 
-    if (name) project.name = name;
-    if (description) project.description = description;
-    if (nodes) project.nodes = nodes;
-    if (edges) project.edges = edges;
-    
-    const updatedProject = await project.save();
-    console.log('Projet mis à jour avec succès:', updatedProject);
-    res.json(updatedProject);
+    res.json(project);
   } catch (error) {
     console.error('Erreur lors de la mise à jour du projet:', error);
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 

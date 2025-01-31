@@ -29,10 +29,10 @@ app.use((req, res, next) => {
 // CORS middleware
 app.use(cors({
   origin: 'http://localhost:3001',
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept'],
-  exposedHeaders: ['Content-Type', 'Accept'],
-  credentials: true
+  exposedHeaders: ['Content-Type', 'Accept']
 }));
 
 // JSON parsing middleware

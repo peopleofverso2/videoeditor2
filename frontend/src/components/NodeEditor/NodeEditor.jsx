@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -11,6 +11,7 @@ import { Box, Menu, MenuItem } from '@mui/material';
 import VideoNode from './nodes/VideoNode';
 import InteractiveNode from './nodes/InteractiveNode';
 import ButtonNode from './nodes/ButtonNode';
+import { captureFlowScreenshot } from '../../services/screenshotService';
 
 const nodeTypes = {
   videoNode: VideoNode,
@@ -18,10 +19,11 @@ const nodeTypes = {
   buttonNode: ButtonNode,
 };
 
-const defaultViewport = { x: 0, y: 0, zoom: 0.7 };
+const defaultViewport = { x: 0, y: 0, zoom: 1 };
 
 function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }) {
   const reactFlowWrapper = useRef(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
 
   const onConnect = useCallback((params) => {
@@ -88,31 +90,33 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
     return basePosition;
   }, []);
 
-  const onDrop = useCallback((event) => {
-    event.preventDefault();
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
 
-    const type = event.dataTransfer.getData('application/reactflow');
-    if (!type) return;
+      const type = event.dataTransfer.getData('application/reactflow');
+      if (!type) return;
 
-    const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-    const scale = 0.7; // Correspond au zoom initial
-    const basePosition = {
-      x: (event.clientX - reactFlowBounds.left) / scale,
-      y: (event.clientY - reactFlowBounds.top) / scale,
-    };
+      // S'assurer que le wrapper existe
+      if (!reactFlowWrapper.current) return;
 
-    // Trouver une position disponible
-    const position = findAvailablePosition(basePosition, nodes);
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+      const position = reactFlowInstance.project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      });
 
-    const newNode = {
-      id: `${type}-${Date.now()}`,
-      type,
-      position,
-      data: { label: `Nouveau ${type}` },
-    };
+      const newNode = {
+        id: `${type}_${nodes.length + 1}`,
+        type,
+        position,
+        data: { label: `${type} node` },
+      };
 
-    setNodes((nds) => nds.concat(newNode));
-  }, [setNodes, nodes, findAvailablePosition]);
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [nodes, reactFlowInstance, setNodes]
+  );
 
   const handleContextMenu = useCallback(
     (event) => {
@@ -138,7 +142,7 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
 
   const addNode = (type) => {
     const newNode = {
-      id: `${type}-${Date.now()}`,
+      id: `${type}_${nodes.length + 1}`,
       type,
       position: contextMenu.position,
       data: { 
@@ -154,15 +158,27 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
     handleClose();
   };
 
+  useEffect(() => {
+    // Ajuster le zoom initial
+    const timeoutId = setTimeout(() => {
+      const flowInstance = document.querySelector('.react-flow');
+      if (flowInstance) {
+        flowInstance.style.transform = 'scale(1)';
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   return (
-    <Box
+    <Box 
       ref={reactFlowWrapper}
-      sx={{
-        width: '100%',
-        height: '100%',
+      sx={{ 
+        width: '100%', 
+        height: '100%', 
         bgcolor: 'background.default',
+        position: 'relative'
       }}
-      onContextMenu={handleContextMenu}
     >
       <ReactFlow
         nodes={nodes}
@@ -170,22 +186,20 @@ function Flow({ nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges }
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
+        nodeTypes={nodeTypes}
+        onInit={setReactFlowInstance}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        nodeTypes={nodeTypes}
-        defaultViewport={defaultViewport}
+        fitView={false}
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         minZoom={0.1}
-        maxZoom={1.5}
-        fitView
-        fitViewOptions={{
-          padding: 0.5,
-          maxZoom: 0.7,
-        }}
+        maxZoom={4}
+        snapToGrid={true}
+        snapGrid={[20, 20]}
+        style={{ background: 'transparent' }}
       >
         <Controls />
-        <MiniMap />
-        <Background gap={16} size={1} />
+        <Background color="rgba(255, 255, 255, 0.05)" gap={20} />
       </ReactFlow>
 
       <Menu

@@ -158,7 +158,7 @@ const Toolbar = ({
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept=".pov"
+        accept="video/*"
         style={{ display: 'none' }}
       />
     </AppBar>
