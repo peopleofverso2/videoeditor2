@@ -51,6 +51,11 @@ export async function exportProject(nodes, edges) {
   }
 }
 
+export const exportProjectWithMedia = async (project) => {
+  // Implementation
+  return exportToPOVWithMedia(project);
+};
+
 export async function importProject(file) {
   try {
     console.log('Début de l\'import du projet:', file.name);
