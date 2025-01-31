@@ -173,3 +173,13 @@ export async function importProject(file) {
     throw error;
   }
 }
+
+// Alias pour la compatibilité
+export const exportToPOVWithMedia = exportProject;
+export const exportProjectWithMedia = exportProject;
+export const importProjectFromZip = importProject;
+
+export {
+  exportProject,
+  importProject
+};
