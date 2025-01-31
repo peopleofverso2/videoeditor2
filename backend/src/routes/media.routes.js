@@ -26,15 +26,14 @@ router.get('/test/:param', (req, res) => {
 // Configuration de multer pour le stockage des fichiers
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    const mediaDir = path.join(__dirname, '../../media');
+    if (!fs.existsSync(mediaDir)) {
+      fs.mkdirSync(mediaDir, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, mediaDir);
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, file.originalname);
   }
 });
 
@@ -43,19 +42,18 @@ const upload = multer({ storage: storage });
 // Middleware pour parser le JSON
 router.use(express.json());
 
-// Stockage des tags en mémoire (à remplacer par une base de données dans une version future)
-const videoTags = new Map();
-
 // Middleware de logging pour les routes media
 router.use((req, res, next) => {
   console.log('\n=== Media Route Accessed ===');
   console.log('Method:', req.method);
-  console.log('Path:', req.path);
+  console.log('URL:', req.originalUrl);
   console.log('Body:', req.body);
-  console.log('Params:', req.params);
   console.log('=========================\n');
   next();
 });
+
+// Stockage des tags en mémoire (à remplacer par une base de données dans une version future)
+const videoTags = new Map();
 
 // Route pour les tags (AVANT les autres routes avec des paramètres)
 router.put('/:filename/tags', (req, res) => {
@@ -64,7 +62,7 @@ router.put('/:filename/tags', (req, res) => {
     const filename = req.params.filename;
     const { tags } = req.body;
     
-    const filepath = path.join(__dirname, '../../uploads', filename);
+    const filepath = path.join(__dirname, '../../media', filename);
     console.log('Filepath:', filepath);
     console.log('File exists:', fs.existsSync(filepath));
 
@@ -91,7 +89,7 @@ router.put('/:filename/tags', (req, res) => {
 router.get('/:filename/tags', (req, res) => {
   try {
     const filename = req.params.filename;
-    const filepath = path.join(__dirname, '../../uploads', filename);
+    const filepath = path.join(__dirname, '../../media', filename);
     
     if (!fs.existsSync(filepath)) {
       return res.status(404).json({ error: 'Fichier non trouvé' });
@@ -105,59 +103,51 @@ router.get('/:filename/tags', (req, res) => {
   }
 });
 
-// Liste tous les fichiers
+// Liste des médias
 router.get('/list', (req, res) => {
   try {
-    const uploadsDir = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    const mediaDir = path.join(__dirname, '../../media');
+    if (!fs.existsSync(mediaDir)) {
+      fs.mkdirSync(mediaDir, { recursive: true });
     }
-
-    const files = fs.readdirSync(uploadsDir)
-      .filter(file => {
-        const ext = path.extname(file).toLowerCase();
-        return ['.mp4', '.webm', '.mov', '.avi'].includes(ext);
-      })
-      .map(file => {
-        const stats = fs.statSync(path.join(uploadsDir, file));
-        return {
-          name: file,
-          path: `/uploads/${file}`,
-          size: stats.size,
-          modifiedAt: stats.mtime,
-          tags: videoTags.get(file) || []
-        };
-      });
-
+    
+    const files = fs.readdirSync(mediaDir)
+      .filter(file => file.match(/\.(mp4|webm|ogg|json)$/))
+      .map(file => ({
+        id: file,
+        name: file,
+        url: `/media/${file}`,
+        type: file.endsWith('.json') ? 'json' : 'video',
+        tags: videoTags.get(file) || []
+      }));
+      
     res.json(files);
   } catch (error) {
-    console.error('Erreur lors de la lecture des fichiers:', error);
-    res.status(500).json({ error: 'Erreur lors de la lecture des fichiers' });
+    console.error('Erreur lors de la lecture du dossier media:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des médias' });
   }
 });
 
-// Upload un fichier
+// Upload d'un média
 router.post('/upload', upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'Aucun fichier n\'a été uploadé' });
+      throw new Error('Aucun fichier reçu');
     }
-
-    // Initialiser les tags pour ce fichier
-    videoTags.set(req.file.filename, []);
-
+    
+    console.log('Fichier reçu:', req.file);
+    
     res.json({
       file: {
-        name: req.file.filename,
-        path: `/uploads/${req.file.filename}`,
+        name: req.file.originalname,
+        path: `/media/${req.file.filename}`,
         size: req.file.size,
-        modifiedAt: new Date(),
-        tags: []
+        type: req.file.originalname.endsWith('.json') ? 'json' : 'video'
       }
     });
   } catch (error) {
     console.error('Erreur lors de l\'upload:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'upload' });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -165,7 +155,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
 router.delete('/:filename', (req, res) => {
   try {
     const filename = req.params.filename;
-    const filepath = path.join(__dirname, '../../uploads', filename);
+    const filepath = path.join(__dirname, '../../media', filename);
 
     if (!fs.existsSync(filepath)) {
       return res.status(404).json({ error: 'Fichier non trouvé' });
@@ -190,12 +180,12 @@ router.get('/export', async (req, res) => {
     res.attachment('media-export.zip');
     archive.pipe(res);
 
-    const uploadsDir = path.join(__dirname, '../../uploads');
-    const files = fs.readdirSync(uploadsDir);
+    const mediaDir = path.join(__dirname, '../../media');
+    const files = fs.readdirSync(mediaDir);
 
     // Ajouter les fichiers à l'archive
     for (const file of files) {
-      const filePath = path.join(uploadsDir, file);
+      const filePath = path.join(mediaDir, file);
       archive.file(filePath, { name: `media/${file}` });
     }
 
@@ -214,7 +204,7 @@ router.post('/import', upload.single('archive'), async (req, res) => {
     }
 
     const archivePath = req.file.path;
-    const extractPath = path.join(__dirname, '../../uploads');
+    const extractPath = path.join(__dirname, '../../media');
 
     await extract(archivePath, { dir: extractPath });
     fs.unlinkSync(archivePath);

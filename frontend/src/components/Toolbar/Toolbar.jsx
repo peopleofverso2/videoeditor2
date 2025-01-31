@@ -26,9 +26,11 @@ const Toolbar = ({
   onUndo,
   onRedo,
   onOpenProjects,
+  onOpenLibrary,
   canUndo,
   canRedo,
-  projectId
+  projectId,
+  projectName
 }) => {
   const fileInputRef = React.createRef();
 
@@ -56,10 +58,21 @@ const Toolbar = ({
           </Tooltip>
 
           <Typography variant="subtitle1" sx={{ ml: 2, flexGrow: 1 }}>
-            {projectId ? 'Projet en cours' : 'Aucun projet sélectionné'}
+            {projectId ? projectName : 'Aucun projet sélectionné'}
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="Bibliothèque média">
+              <span>
+                <IconButton
+                  onClick={onOpenLibrary}
+                  disabled={!projectId}
+                >
+                  <VideoLibraryIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+
             <Tooltip title="Annuler">
               <span>
                 <IconButton

@@ -1,5 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { ThemeProvider, CssBaseline, Box, IconButton, Drawer } from '@mui/material';
+import { 
+  ThemeProvider, 
+  CssBaseline, 
+  Box, 
+  IconButton, 
+  Drawer,
+  Container
+} from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { Group as GroupIcon } from '@mui/icons-material';
 import NodeEditor from './components/NodeEditor/NodeEditor';
@@ -7,8 +14,12 @@ import Toolbar from './components/Toolbar/Toolbar';
 import PreviewModal from './components/Preview/PreviewModal';
 import MembersManager from './components/Collaboration/MembersManager';
 import ProjectSelector from './components/Project/ProjectSelector';
+import MediaLibrary from './components/MediaLibrary/MediaLibrary';
 import { useNodesState, useEdgesState } from 'reactflow';
 import { exportProject, importProject } from './services/exportService';
+import { ReactFlowProvider } from 'reactflow';
+import { API_URL } from './constants/api';
+import 'reactflow/dist/style.css';
 
 // Création du thème
 const theme = createTheme({
@@ -25,11 +36,12 @@ const theme = createTheme({
 
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]); 
   const [openMembers, setOpenMembers] = useState(false);
-  const [openProjects, setOpenProjects] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [currentProjectName, setCurrentProjectName] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [history, setHistory] = useState({
     past: [],
     present: { nodes, edges },
@@ -88,13 +100,33 @@ export default function App() {
   }, [history, setNodes, setEdges]);
 
   const handleSave = useCallback(async () => {
+    if (!currentProjectId) {
+      console.error('Aucun projet sélectionné');
+      return;
+    }
+
     try {
-      await exportProject(nodes, edges);
+      const response = await fetch(`${API_URL}/projects/${currentProjectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nodes,
+          edges,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la sauvegarde');
+      }
+
+      console.log('Projet sauvegardé avec succès');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde du projet');
     }
-  }, [nodes, edges]);
+  }, [currentProjectId, nodes, edges]);
 
   const handleImport = useCallback(async (file) => {
     try {
@@ -120,103 +152,164 @@ export default function App() {
     setPreviewOpen(true);
   }, [setPreviewOpen]);
 
-  const handleProjectSelect = (projectId) => {
-    setCurrentProjectId(projectId);
-    setOpenProjects(false);
+  const handleProjectSelect = async (projectId) => {
+    try {
+      const response = await fetch(`${API_URL}/projects/${projectId}`);
+      if (!response.ok) throw new Error('Erreur lors du chargement du projet');
+      
+      const project = await response.json();
+      setNodes(project.nodes || []);
+      setEdges(project.edges || []);
+      setCurrentProjectId(projectId);
+      setCurrentProjectName(project.name);
+      
+      // Réinitialiser l'historique
+      setHistory({
+        past: [],
+        present: { nodes: project.nodes || [], edges: project.edges || [] },
+        future: []
+      });
+    } catch (error) {
+      console.error('Erreur lors du chargement du projet:', error);
+      alert('Erreur lors du chargement du projet');
+    }
   };
+
+  const handleOpenProjects = useCallback(async () => {
+    // Sauvegarder l'état actuel si un projet est ouvert
+    if (currentProjectId) {
+      try {
+        const response = await fetch(`${API_URL}/projects/${currentProjectId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nodes,
+            edges,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors de la sauvegarde');
+        }
+
+        console.log('Projet sauvegardé avant de retourner à la liste');
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        const shouldContinue = window.confirm(
+          'Erreur lors de la sauvegarde du projet. Voulez-vous quand même retourner à la liste des projets ?'
+        );
+        if (!shouldContinue) {
+          return;
+        }
+      }
+    }
+
+    // Réinitialiser l'état
+    setCurrentProjectId(null);
+    setCurrentProjectName('');
+    setNodes([]);
+    setEdges([]);
+    setHistory({
+      past: [],
+      present: { nodes: [], edges: [] },
+      future: []
+    });
+  }, [currentProjectId, nodes, edges]);
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Toolbar
-          onOpenProjects={() => setOpenProjects(true)}
-          projectId={currentProjectId}
-          onSave={handleSave}
-          onImport={handleImport}
-          onPlay={handlePlay}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          canUndo={history.past.length > 0}
-          canRedo={history.future.length > 0}
-        />
+      <ReactFlowProvider>
+        <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+          {!currentProjectId ? (
+            <Container>
+              <Box sx={{ mt: 4 }}>
+                <ProjectSelector onProjectSelect={handleProjectSelect} />
+              </Box>
+            </Container>
+          ) : (
+            <>
+              <Toolbar
+                projectId={currentProjectId}
+                projectName={currentProjectName}
+                onSave={handleSave}
+                onImport={handleImport}
+                onPlay={handlePlay}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={history.past.length > 0}
+                canRedo={history.future.length > 0}
+                onOpenProjects={handleOpenProjects}
+                onOpenLibrary={() => setLibraryOpen(true)}
+              />
 
-        <Box sx={{ flexGrow: 1 }}>
-          <NodeEditor
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            setNodes={setNodes}
-            setEdges={setEdges}
-          />
-        </Box>
+              <Box sx={{ flexGrow: 1, position: 'relative' }}>
+                <NodeEditor
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={handleNodesChange}
+                  onEdgesChange={handleEdgesChange}
+                  setNodes={setNodes}
+                  setEdges={setEdges}
+                />
+              </Box>
 
-        <PreviewModal
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-          nodes={nodes}
-          edges={edges}
-        />
+              <PreviewModal
+                open={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+                nodes={nodes}
+                edges={edges}
+              />
 
-        {/* Drawer des projets */}
-        <Drawer
-          anchor="left"
-          open={openProjects}
-          onClose={() => setOpenProjects(false)}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: 400 },
-              maxWidth: '100%',
-              p: 2
-            }
-          }}
-        >
-          <ProjectSelector
-            currentProjectId={currentProjectId}
-            onProjectSelect={handleProjectSelect}
-          />
-        </Drawer>
+              <MediaLibrary
+                open={libraryOpen}
+                onClose={() => setLibraryOpen(false)}
+                onSelect={(video) => {
+                  // Votre logique de sélection de vidéo existante
+                  setLibraryOpen(false);
+                }}
+              />
 
-        {/* Drawer des membres */}
-        <Drawer
-          anchor="right"
-          open={openMembers}
-          onClose={() => setOpenMembers(false)}
-          PaperProps={{
-            sx: {
-              width: { xs: '100%', sm: 400 },
-              maxWidth: '100%'
-            }
-          }}
-        >
-          {currentProjectId && (
-            <MembersManager 
-              projectId={currentProjectId}
-              onClose={() => setOpenMembers(false)}
-            />
+              {/* Drawer des membres */}
+              <Drawer
+                anchor="right"
+                open={openMembers}
+                onClose={() => setOpenMembers(false)}
+                PaperProps={{
+                  sx: {
+                    width: { xs: '100%', sm: 400 },
+                    maxWidth: '100%'
+                  }
+                }}
+              >
+                <MembersManager 
+                  projectId={currentProjectId}
+                  onClose={() => setOpenMembers(false)}
+                />
+              </Drawer>
+
+              {/* Bouton de gestion des membres */}
+              <Box sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1000 }}>
+                <IconButton
+                  color="primary"
+                  onClick={() => setOpenMembers(true)}
+                  sx={{
+                    backgroundColor: 'white',
+                    boxShadow: 2,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    }
+                  }}
+                >
+                  <GroupIcon />
+                </IconButton>
+              </Box>
+            </>
           )}
-        </Drawer>
-
-        {/* Bouton de gestion des membres */}
-        {currentProjectId && (
-          <Box sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1000 }}>
-            <IconButton
-              color="primary"
-              onClick={() => setOpenMembers(true)}
-              sx={{
-                backgroundColor: 'white',
-                boxShadow: 2,
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                }
-              }}
-            >
-              <GroupIcon />
-            </IconButton>
-          </Box>
-        )}
-      </Box>
+        </Box>
+      </ReactFlowProvider>
     </ThemeProvider>
   );
 }

@@ -34,46 +34,67 @@ import {
   LocalOffer as TagIcon,
   ImportExport as ImportExportIcon,
 } from '@mui/icons-material';
+import { loadLibraryState, saveLibraryState } from '../../services/libraryService';
 
 // Définir l'URL de l'API en fonction de l'environnement
 const API_URL = 'http://localhost:4000';
 
 export default function MediaLibrary({ open, onClose, onSelect }) {
+  // Charger l'état initial depuis le stockage local
+  const initialState = loadLibraryState();
+  
   const [videos, setVideos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortBy, setSortBy] = useState(initialState.sortBy);
+  const [sortOrder, setSortOrder] = useState(initialState.sortOrder);
   const [editingTags, setEditingTags] = useState(null);
   const [newTag, setNewTag] = useState('');
-  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState(initialState.selectedTags);
+
+  // Sauvegarder l'état quand il change
+  useEffect(() => {
+    if (open) {  // Ne sauvegarder que si la bibliothèque est ouverte
+      saveLibraryState({
+        sortBy,
+        sortOrder,
+        selectedTags,
+      });
+    }
+  }, [sortBy, sortOrder, selectedTags, open]);
+
+  // Charger l'état quand la bibliothèque s'ouvre
+  useEffect(() => {
+    if (open) {
+      const savedState = loadLibraryState();
+      setSortBy(savedState.sortBy);
+      setSortOrder(savedState.sortOrder);
+      setSelectedTags(savedState.selectedTags);
+      fetchVideos();
+    }
+  }, [open]);
 
   const fetchVideos = useCallback(async () => {
     try {
+      console.log('Fetching videos...');
       const response = await fetch(`${API_URL}/api/media/list`);
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des vidéos');
       }
       const data = await response.json();
-      // Initialiser les tags si nécessaire
-      const videosWithTags = data.map(video => ({
-        ...video,
-        tags: video.tags || []
-      }));
-      setVideos(videosWithTags);
+      console.log('Received videos:', data);
+      
+      // Les tags sont maintenant inclus dans la réponse de l'API
+      setVideos(data);
+      setError(null);
     } catch (error) {
       console.error('Error fetching videos:', error);
       setError('Erreur lors du chargement des vidéos');
+      setVideos([]);
     }
   }, []);
-
-  useEffect(() => {
-    if (open) {
-      fetchVideos();
-    }
-  }, [open, fetchVideos]);
 
   // Tri et filtrage des vidéos
   const sortedVideos = useMemo(() => {
@@ -139,7 +160,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
         }
 
         const uploadedVideo = await response.json();
-        setVideos(prevVideos => [...prevVideos, { ...uploadedVideo.file, tags: [] }]);
+        setVideos(prevVideos => [...prevVideos, uploadedVideo]);
         setUploadProgress(100);
       } catch (error) {
         console.error('Upload failed:', error);
@@ -172,72 +193,59 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
     if (!tagToAdd?.trim()) return;
     
     try {
-      console.log('Adding tag to video:', video);
-      console.log('Tag to add:', tagToAdd);
-      
-      const updatedTags = [...(video.tags || []), tagToAdd.trim()];
-      console.log('Updated tags:', updatedTags);
-      
-      const url = `${API_URL}/api/media/${encodeURIComponent(video.name)}/tags`;
-      console.log('Request URL:', url);
-      
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tags: updatedTags }),
-      });
-
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error:', errorText);
-        throw new Error('Erreur lors de la mise à jour des tags');
-      }
-
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      // Mettre à jour l'état local avec les nouveaux tags
-      setVideos(prevVideos =>
-        prevVideos.map(v =>
-          v.name === video.name ? { ...v, tags: data.tags } : v
-        )
-      );
-
-      // Réinitialiser le champ de tag
-      setNewTag('');
-      setEditingTags(null);
-    } catch (error) {
-      console.error('Error updating tags:', error);
-      setError('Erreur lors de la mise à jour des tags');
-    }
-  };
-
-  const handleRemoveTag = async (video, tagToRemove) => {
-    try {
-      const updatedTags = (video.tags || []).filter(tag => tag !== tagToRemove);
       const response = await fetch(`${API_URL}/api/media/${encodeURIComponent(video.name)}/tags`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tags: updatedTags }),
+        body: JSON.stringify({
+          tags: [...(video.tags || []), tagToAdd.trim()]
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour des tags');
+        throw new Error('Erreur lors de l\'ajout du tag');
       }
 
-      const data = await response.json();
-      setVideos(prevVideos => 
-        prevVideos.map(v => v.name === video.name ? { ...v, tags: data.tags } : v)
+      const { tags } = await response.json();
+      setVideos(prevVideos =>
+        prevVideos.map(v =>
+          v.name === video.name ? { ...v, tags } : v
+        )
+      );
+      setNewTag('');
+      setEditingTags(null);
+    } catch (error) {
+      console.error('Error adding tag:', error);
+      setError('Erreur lors de l\'ajout du tag');
+    }
+  };
+
+  const handleRemoveTag = async (video, tagToRemove) => {
+    try {
+      const newTags = video.tags.filter(tag => tag !== tagToRemove);
+      
+      const response = await fetch(`${API_URL}/api/media/${encodeURIComponent(video.name)}/tags`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tags: newTags })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression du tag');
+      }
+
+      const { tags } = await response.json();
+      setVideos(prevVideos =>
+        prevVideos.map(v =>
+          v.name === video.name ? { ...v, tags } : v
+        )
       );
     } catch (error) {
-      console.error('Error updating tags:', error);
-      setError('Erreur lors de la mise à jour des tags');
+      console.error('Error removing tag:', error);
+      setError('Erreur lors de la suppression du tag');
     }
   };
 
@@ -400,7 +408,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
               <Card>
                 <CardMedia
                   component="video"
-                  src={`${API_URL}${video.path}`}
+                  src={`${API_URL}${video.url}`}
                   controls
                   sx={{ height: 140 }}
                 />
@@ -415,7 +423,7 @@ export default function MediaLibrary({ open, onClose, onSelect }) {
                   <Box sx={{ mb: 1 }}>
                     {video.tags?.map(tag => (
                       <Chip
-                        key={tag}
+                        key={`${video.name}-${tag}`}
                         label={tag}
                         size="small"
                         onDelete={() => handleRemoveTag(video, tag)}

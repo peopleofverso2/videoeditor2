@@ -8,20 +8,17 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
+  ListItemButton,
   TextField,
   Typography,
   Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon
 } from '@mui/icons-material';
-import { API_URL } from '@constants/api';
+import { API_URL } from '../../constants/api';
 
-const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
+const ProjectSelector = ({ onProjectSelect }) => {
   const [projects, setProjects] = useState([]);
   const [openNewProject, setOpenNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -31,10 +28,12 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
   // Charger les projets
   const fetchProjects = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/projects`);
+      const response = await fetch(`${API_URL}/projects`);
       if (!response.ok) throw new Error('Erreur lors du chargement des projets');
       const data = await response.json();
+      console.log('Projets chargés:', data);
       setProjects(data);
+      setError(null);
     } catch (error) {
       setError('Erreur lors du chargement des projets');
       console.error('Erreur:', error);
@@ -49,7 +48,7 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
   const handleCreateProject = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/api/projects`, {
+      const response = await fetch(`${API_URL}/projects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,13 +60,14 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
       });
 
       if (!response.ok) throw new Error('Erreur lors de la création du projet');
-      
+
       const newProject = await response.json();
-      setProjects([...projects, newProject]);
+      console.log('Nouveau projet créé:', newProject);
+      setProjects(prev => [...prev, newProject]);
       setOpenNewProject(false);
       setNewProjectName('');
       setNewProjectDescription('');
-      onProjectSelect(newProject._id);
+      setError(null);
     } catch (error) {
       setError('Erreur lors de la création du projet');
       console.error('Erreur:', error);
@@ -75,7 +75,7 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
   };
 
   return (
-    <Box>
+    <Box sx={{ p: 2 }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -96,24 +96,13 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
 
       <List>
         {projects.map((project) => (
-          <ListItem
-            key={project._id}
-            button
-            selected={project._id === currentProjectId}
-            onClick={() => onProjectSelect(project._id)}
-          >
-            <ListItemText
-              primary={project.name}
-              secondary={project.description}
-            />
-            <ListItemSecondaryAction>
-              <IconButton edge="end" aria-label="edit">
-                <EditIcon />
-              </IconButton>
-              <IconButton edge="end" aria-label="delete">
-                <DeleteIcon />
-              </IconButton>
-            </ListItemSecondaryAction>
+          <ListItem key={project._id} disablePadding>
+            <ListItemButton onClick={() => onProjectSelect(project._id)}>
+              <ListItemText
+                primary={project.name}
+                secondary={project.description}
+              />
+            </ListItemButton>
           </ListItem>
         ))}
       </List>
@@ -121,7 +110,7 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
       <Dialog open={openNewProject} onClose={() => setOpenNewProject(false)}>
         <DialogTitle>Nouveau projet</DialogTitle>
         <DialogContent>
-          <form onSubmit={handleCreateProject}>
+          <Box component="form" onSubmit={handleCreateProject} sx={{ pt: 1 }}>
             <TextField
               autoFocus
               margin="dense"
@@ -129,7 +118,7 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
               fullWidth
               value={newProjectName}
               onChange={(e) => setNewProjectName(e.target.value)}
-              required
+              sx={{ mb: 2 }}
             />
             <TextField
               margin="dense"
@@ -139,16 +128,12 @@ const ProjectSelector = ({ currentProjectId, onProjectSelect }) => {
               rows={3}
               value={newProjectDescription}
               onChange={(e) => setNewProjectDescription(e.target.value)}
+              sx={{ mb: 3 }}
             />
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setOpenNewProject(false)}>
-                Annuler
-              </Button>
-              <Button type="submit" variant="contained">
-                Créer
-              </Button>
-            </Box>
-          </form>
+            <Button type="submit" variant="contained" fullWidth>
+              Créer
+            </Button>
+          </Box>
         </DialogContent>
       </Dialog>
     </Box>

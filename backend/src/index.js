@@ -7,6 +7,9 @@ import fs from 'fs';
 import mongoose from 'mongoose';
 import mediaRoutes from './routes/media.routes.js';
 import projectRoutes from './routes/projects.js';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import presenceService from './services/presenceService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,18 +27,24 @@ app.use((req, res, next) => {
 });
 
 // CORS middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3001',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Accept'],
+  credentials: true
+}));
 
 // JSON parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Configure uploads directory
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+const mediaDir = path.join(__dirname, '../media');
+if (!fs.existsSync(mediaDir)) {
+  fs.mkdirSync(mediaDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));
+app.use('/media', express.static(mediaDir));
 
 // Mount routes
 app.use('/api/media', mediaRoutes);
@@ -74,9 +83,26 @@ app.use((req, res) => {
 });
 
 const PORT = 4000;
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+// Initialize WebSocket server with CORS
+const wsServer = new WebSocketServer({ 
+  server,
+  verifyClient: (info) => {
+    // Autoriser les connexions depuis le frontend
+    const origin = info.origin;
+    console.log('Tentative de connexion WebSocket depuis:', origin);
+    return origin === 'http://localhost:3001';
+  }
+});
+
+// Initialize presence service with our WebSocket server
+presenceService.initialize(wsServer);
+
+server.listen(PORT, () => {
   console.log(`\n=== Server Started ===`);
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Uploads directory: ${uploadsDir}`);
+  console.log(`WebSocket server running on ws://localhost:${PORT}/presence`);
+  console.log(`Media directory: ${mediaDir}`);
   console.log(`===================\n`);
 });

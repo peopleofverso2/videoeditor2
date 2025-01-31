@@ -1,202 +1,179 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  List,
-  ListItem,
-  ListItemAvatar,
+import { 
+  Box, 
+  Typography, 
+  Avatar, 
+  List, 
+  ListItem, 
+  ListItemAvatar, 
   ListItemText,
   ListItemSecondaryAction,
-  Avatar,
-  IconButton,
   Chip,
   Badge,
-  Dialog,
-  useTheme,
+  Snackbar,
   Alert
 } from '@mui/material';
-import {
-  PersonAdd as PersonAddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon
-} from '@mui/icons-material';
-import InviteMemberDialog from './InviteMemberDialog';
-import EditMemberDialog from './EditMemberDialog';
-import { API_URL, WS_URL } from '@constants/api';
-import useWebSocket from '@/hooks/useWebSocket';
+import { styled } from '@mui/material/styles';
+import presenceService from '../../services/presenceService';
+import { USER_STATUS, USER_STATUS_LABELS, USER_STATUS_COLORS } from '../../types/presence';
 
-const roleColors = {
-  owner: '#8bc34a',
-  admin: '#ff9800',
-  editor: '#2196f3',
-  viewer: '#757575'
-};
-
-const MembersManager = ({ projectId }) => {
-  const theme = useTheme();
-  const [members, setMembers] = useState([]);
-  const [openInvite, setOpenInvite] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
-  const [error, setError] = useState(null);
-
-  const { isConnected } = useWebSocket(`${WS_URL}/presence`, {
-    onMessage: (data) => {
-      if (data.type === 'presence') {
-        setOnlineUsers(new Set(data.onlineUsers));
-      }
+const StyledBadge = styled(Badge)(({ theme, status }) => ({
+  '& .MuiBadge-badge': {
+    backgroundColor: status,
+    color: status,
+    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+    '&::after': {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      borderRadius: '50%',
+      animation: 'ripple 1.2s infinite ease-in-out',
+      border: '1px solid currentColor',
+      content: '""',
     },
-    onError: (err) => {
-      console.error('WebSocket error:', err);
-      setError('Erreur de connexion au service de présence');
-    }
-  });
+  },
+  '@keyframes ripple': {
+    '0%': {
+      transform: 'scale(.8)',
+      opacity: 1,
+    },
+    '100%': {
+      transform: 'scale(2.4)',
+      opacity: 0,
+    },
+  },
+}));
 
-  // Charger la liste des membres
-  const fetchMembers = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/collaboration/projects/${projectId}/members`);
-      if (!response.ok) throw new Error('Erreur lors du chargement des membres');
-      const data = await response.json();
-      setMembers(data);
-      setError(null);
-    } catch (error) {
-      console.error('Erreur:', error);
-      setError('Erreur lors du chargement des membres');
-    }
-  };
-
-  // Supprimer un membre
-  const handleRemoveMember = async (userId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir retirer ce membre ?')) return;
-    
-    try {
-      const response = await fetch(
-        `${API_URL}/api/collaboration/projects/${projectId}/members/${userId}`,
-        { method: 'DELETE' }
-      );
-      if (!response.ok) throw new Error('Erreur lors de la suppression');
-      await fetchMembers();
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
-  };
-
-  // Gérer l'édition d'un membre
-  const handleEditMember = (member) => {
-    setSelectedMember(member);
-    setOpenEdit(true);
-  };
-
-  // Mise à jour après modification
-  const handleMemberUpdated = () => {
-    fetchMembers();
-    setOpenEdit(false);
-    setSelectedMember(null);
-  };
+const MembersManager = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [users, setUsers] = useState(new Map());
+  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [typingUsers, setTypingUsers] = useState(new Set());
 
   useEffect(() => {
-    fetchMembers();
-  }, [projectId]);
+    const handlePresenceEvent = (event) => {
+      switch (event.type) {
+        case 'connection':
+          setIsConnected(event.status);
+          if (!event.status) {
+            setUsers(new Map());
+            setTypingUsers(new Set());
+          }
+          break;
+
+        case 'message':
+          const { type, users: userList, user, isTyping } = event.data;
+          if (type === 'presence' && userList) {
+            const usersMap = new Map();
+            userList.forEach(user => {
+              usersMap.set(user.userId, user);
+            });
+            setUsers(usersMap);
+          } else if (type === 'typing') {
+            setTypingUsers(prevTyping => {
+              const newTyping = new Set(prevTyping);
+              if (isTyping) {
+                newTyping.add(user.userId);
+              } else {
+                newTyping.delete(user.userId);
+              }
+              return newTyping;
+            });
+          }
+          break;
+
+        case 'notification':
+          setNotification(event.message);
+          break;
+
+        case 'error':
+          console.error('Erreur présence:', event.error);
+          setError('Erreur de connexion au service de présence');
+          break;
+      }
+    };
+
+    presenceService.addListener(handlePresenceEvent);
+    
+    if (!presenceService.isConnected) {
+      presenceService.connect();
+    }
+
+    return () => {
+      presenceService.removeListener(handlePresenceEvent);
+    };
+  }, []);
+
+  const handleCloseNotification = () => {
+    setNotification(null);
+  };
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Membres du projet</Typography>
-        <Box>
-          {!isConnected && (
-            <Chip
-              label="Hors ligne"
-              color="error"
-              size="small"
-              sx={{ mr: 1 }}
-            />
-          )}
-          <IconButton 
-            color="primary" 
-            onClick={() => setOpenInvite(true)}
-            sx={{ backgroundColor: theme.palette.primary.main + '20' }}
-          >
-            <PersonAddIcon />
-          </IconButton>
-        </Box>
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <Typography variant="h6">
+          Membres en ligne ({users.size})
+        </Typography>
+        <Chip 
+          size="small"
+          label={isConnected ? "Connecté" : "Déconnecté"}
+          color={isConnected ? "success" : "error"}
+        />
       </Box>
-
+      
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Typography color="error" gutterBottom>
           {error}
-        </Alert>
+        </Typography>
       )}
-
-      <Paper elevation={2}>
-        <List>
-          {members.map((member) => (
-            <ListItem key={member.user._id} divider>
-              <ListItemAvatar>
-                <Badge
-                  overlap="circular"
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  variant="dot"
-                  color={onlineUsers.has(member.user._id) ? "success" : "default"}
+      
+      <List>
+        {Array.from(users.values()).map((user) => (
+          <ListItem key={user.userId}>
+            <ListItemAvatar>
+              <StyledBadge
+                overlap="circular"
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                variant="dot"
+                status={USER_STATUS_COLORS[user.status]}
+              >
+                <Avatar 
+                  alt={user.displayName} 
+                  src={user.avatarUrl}
+                  sx={{ width: 40, height: 40 }}
                 >
-                  <Avatar src={member.user.avatar} alt={member.user.username}>
-                    {member.user.username[0].toUpperCase()}
-                  </Avatar>
-                </Badge>
-              </ListItemAvatar>
-              <ListItemText
-                primary={member.user.username}
-                secondary={member.user.email}
-              />
-              <Chip
-                label={member.role}
-                size="small"
-                sx={{
-                  backgroundColor: roleColors[member.role],
-                  color: 'white',
-                  mr: 1
-                }}
-              />
-              <ListItemSecondaryAction>
-                {member.role !== 'owner' && (
-                  <>
-                    <IconButton 
-                      edge="end" 
-                      onClick={() => handleEditMember(member)}
-                      sx={{ mr: 1 }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      edge="end" 
-                      onClick={() => handleRemoveMember(member.user._id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </>
-                )}
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
-      </Paper>
+                  {user.displayName.charAt(0).toUpperCase()}
+                </Avatar>
+              </StyledBadge>
+            </ListItemAvatar>
+            <ListItemText 
+              primary={user.displayName}
+              secondary={USER_STATUS_LABELS[user.status]}
+            />
+            <ListItemSecondaryAction>
+              {typingUsers.has(user.userId) && (
+                <Typography variant="caption" color="text.secondary">
+                  En train d'écrire...
+                </Typography>
+              )}
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}
+      </List>
 
-      <InviteMemberDialog
-        open={openInvite}
-        onClose={() => setOpenInvite(false)}
-        projectId={projectId}
-        onMemberAdded={fetchMembers}
-      />
-
-      <EditMemberDialog
-        open={openEdit}
-        onClose={() => setOpenEdit(false)}
-        member={selectedMember}
-        projectId={projectId}
-        onMemberUpdated={handleMemberUpdated}
-      />
+      <Snackbar
+        open={!!notification}
+        autoHideDuration={3000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert onClose={handleCloseNotification} severity="info">
+          {notification}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

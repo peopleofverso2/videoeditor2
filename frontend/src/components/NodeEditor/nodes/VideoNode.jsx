@@ -36,7 +36,7 @@ export default function VideoNode({ id, data, isConnectable, selected }) {
             ...node,
             data: {
               ...node.data,
-              videoUrl: video.path,
+              videoUrl: video.url,
               thumbnail: video.thumbnail,
               label: video.name,
               metadata: video.metadata,
