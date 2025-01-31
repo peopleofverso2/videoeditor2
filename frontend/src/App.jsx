@@ -20,9 +20,6 @@ import { useNodesState, useEdgesState, ReactFlowProvider } from 'reactflow';
 import { exportProject, exportProjectWithMedia, importProject } from './services/exportService';
 import { API_URL } from './constants/api';
 import 'reactflow/dist/style.css';
-import { exportProject, exportProjectWithMedia, importProject } from "./services/exportService";
-import { API_URL } from "./constants/api";
-import "reactflow/dist/style.css";
 
 // Création du thème
 const theme = createTheme({
