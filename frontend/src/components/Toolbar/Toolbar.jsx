@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar as MuiToolbar,
@@ -6,7 +6,7 @@ import {
   Button,
   Box,
   Tooltip,
-  Typography
+  Typography,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -16,8 +16,10 @@ import {
   Redo as RedoIcon,
   FolderOpen as FolderIcon,
   VideoLibrary as VideoLibraryIcon,
-  SmartButton as ButtonIcon
+  SmartButton as ButtonIcon,
+  Share as ShareIcon,
 } from '@mui/icons-material';
+import ShareDialog from '../Project/ShareDialog';
 
 const Toolbar = ({
   onSave,
@@ -33,13 +35,14 @@ const Toolbar = ({
   projectName
 }) => {
   const fileInputRef = React.createRef();
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (file) {
       await onImport(file);
-      event.target.value = ''; // Reset input
     }
+    event.target.value = ''; // Reset input
   };
 
   const handleDragStart = (event, type) => {
@@ -117,6 +120,14 @@ const Toolbar = ({
               </span>
             </Tooltip>
 
+            <Tooltip title="Partager">
+              <span>
+                <IconButton onClick={() => setShareDialogOpen(true)}>
+                  <ShareIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+
             <Tooltip title="Lancer la prévisualisation">
               <span>
                 <Button
@@ -157,9 +168,14 @@ const Toolbar = ({
       <input
         type="file"
         ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="video/*"
         style={{ display: 'none' }}
+        onChange={handleFileChange}
+        accept=".json,.pov"
+      />
+      <ShareDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        projectId={projectId}
       />
     </AppBar>
   );

@@ -8,25 +8,25 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
+        target: process.env.VITE_API_URL || 'http://localhost:4000',
         changeOrigin: true,
         secure: false
       },
       '/uploads': {
-        target: 'http://localhost:4000',
+        target: process.env.VITE_API_URL || 'http://localhost:4000',
         changeOrigin: true,
         secure: false
       },
       '/presence': {
         target: 'ws://localhost:4000',
         ws: true,
+        changeOrigin: true,
         secure: false
       }
     }
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
       '@constants': path.resolve(__dirname, './src/constants')
     }
