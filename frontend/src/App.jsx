@@ -5,7 +5,8 @@ import NodeEditor from './components/NodeEditor/NodeEditor';
 import Toolbar from './components/Toolbar/Toolbar';
 import PreviewModal from './components/Preview/PreviewModal';
 import { useNodesState, useEdgesState } from 'reactflow';
-import { exportProject, importProject } from './services/exportService';
+import { exportProject as exportToPOVWithMedia, exportProject as exportProjectWithMedia, importProject as importProjectFromZip } from './services/exportService';
+import 'reactflow/dist/style.css';
 
 // Création du thème
 const theme = createTheme({
@@ -85,7 +86,7 @@ export default function App() {
 
   const handleSave = useCallback(async () => {
     try {
-      await exportProject(nodes, edges);
+      await exportToPOVWithMedia(nodes, edges);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert(`Erreur lors de la sauvegarde du projet: ${error.message || 'Une erreur inconnue est survenue'}`);
@@ -98,7 +99,7 @@ export default function App() {
         throw new Error('Aucun fichier sélectionné');
       }
 
-      const { nodes: importedNodes, edges: importedEdges } = await importProject(file);
+      const { nodes: importedNodes, edges: importedEdges } = await importProjectFromZip(file);
       
       // Mettre à jour l'état
       setNodes(importedNodes);
