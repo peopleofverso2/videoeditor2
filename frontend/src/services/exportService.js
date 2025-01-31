@@ -1,3 +1,5 @@
+// Export service for POV video editor
+
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import config from '../config';
