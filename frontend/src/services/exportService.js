@@ -1,7 +1,8 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import config from '../config';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = config.apiUrl;
 
 export async function exportProject(nodes, edges) {
   try {
