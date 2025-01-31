@@ -5,16 +5,21 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
+  DialogContentText,
   List,
   ListItem,
   ListItemText,
   ListItemButton,
+  ListItemSecondaryAction,
   TextField,
   Typography,
-  Alert
+  Alert,
+  IconButton,
 } from '@mui/material';
 import {
   Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { API_URL } from '../../constants/api';
 
@@ -24,6 +29,7 @@ const ProjectSelector = ({ onProjectSelect }) => {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [error, setError] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
   // Charger les projets
   const fetchProjects = async () => {
@@ -74,6 +80,24 @@ const ProjectSelector = ({ onProjectSelect }) => {
     }
   };
 
+  // Supprimer un projet
+  const handleDeleteProject = async (projectId) => {
+    try {
+      const response = await fetch(`${API_URL}/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la suppression du projet');
+
+      setProjects(prev => prev.filter(p => p._id !== projectId));
+      setDeleteConfirmation(null);
+      setError(null);
+    } catch (error) {
+      setError('Erreur lors de la suppression du projet');
+      console.error('Erreur:', error);
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       {error && (
@@ -96,7 +120,22 @@ const ProjectSelector = ({ onProjectSelect }) => {
 
       <List>
         {projects.map((project) => (
-          <ListItem key={project._id} disablePadding>
+          <ListItem 
+            key={project._id} 
+            disablePadding
+            secondaryAction={
+              <IconButton 
+                edge="end" 
+                aria-label="delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteConfirmation(project);
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            }
+          >
             <ListItemButton onClick={() => onProjectSelect(project._id)}>
               <ListItemText
                 primary={project.name}
@@ -135,6 +174,30 @@ const ProjectSelector = ({ onProjectSelect }) => {
             </Button>
           </Box>
         </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog
+        open={!!deleteConfirmation}
+        onClose={() => setDeleteConfirmation(null)}
+      >
+        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Êtes-vous sûr de vouloir supprimer le projet "{deleteConfirmation?.name}" ?
+            Cette action est irréversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmation(null)}>Annuler</Button>
+          <Button
+            onClick={() => handleDeleteProject(deleteConfirmation._id)}
+            color="error"
+            variant="contained"
+          >
+            Supprimer
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

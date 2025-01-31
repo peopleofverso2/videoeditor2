@@ -63,7 +63,7 @@ export default function VideoNode({ id, data, isConnectable, selected }) {
     <>
       <Card
         sx={{
-          width: 280,
+          width: 240,
           bgcolor: 'background.paper',
           borderRadius: 2,
           boxShadow: selected ? 4 : 2,
@@ -98,7 +98,7 @@ export default function VideoNode({ id, data, isConnectable, selected }) {
               <ReactPlayer
                 url={getFullUrl(data.videoUrl)}
                 width="100%"
-                height={157.5} // 16:9 ratio
+                height={135} // 16:9 ratio
                 playing={playing}
                 controls={false}
                 onEnded={() => setPlaying(false)}
@@ -138,7 +138,7 @@ export default function VideoNode({ id, data, isConnectable, selected }) {
           ) : (
             <Box
               sx={{
-                height: 157.5,
+                height: 135,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
