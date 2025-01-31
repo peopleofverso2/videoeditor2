@@ -1,0 +1,141 @@
+{
+  "nodes": [
+    {
+      "id": "buttonNode-1738255814248",
+      "type": "buttonNode",
+      "position": {
+        "x": -80.04991975390246,
+        "y": -224.76108873851987
+      },
+      "data": {
+        "label": "Nouveau buttonNode",
+        "style": {
+          "color": "#000000"
+        }
+      },
+      "width": 222,
+      "height": 172,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": -80.04991975390246,
+        "y": -224.76108873851987
+      }
+    },
+    {
+      "id": "buttonNode-1738255965522",
+      "type": "buttonNode",
+      "position": {
+        "x": -328.7705497482341,
+        "y": 437.46897721544883
+      },
+      "data": {
+        "label": "Nouveau buttonNode"
+      },
+      "width": 222,
+      "height": 172,
+      "positionAbsolute": {
+        "x": -328.7705497482341,
+        "y": 437.46897721544883
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "videoNode-1738255966861",
+      "type": "videoNode",
+      "position": {
+        "x": -500.41505722807494,
+        "y": 106.80443181536364
+      },
+      "data": {
+        "label": "1738166277550-649474336.mp4",
+        "videoUrl": "/uploads/1738166277550-649474336.mp4"
+      },
+      "width": 302,
+      "height": 244,
+      "positionAbsolute": {
+        "x": -500.41505722807494,
+        "y": 106.80443181536364
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "videoNode-1738256349470",
+      "type": "videoNode",
+      "position": {
+        "x": 271.3604228948441,
+        "y": -49.036888643942405
+      },
+      "data": {
+        "label": "1738165895362-698342381.mp4",
+        "videoUrl": "/uploads/1738165895362-698342381.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 271.3604228948441,
+        "y": -49.036888643942405
+      }
+    },
+    {
+      "id": "videoNode-1738256375261",
+      "type": "videoNode",
+      "position": {
+        "x": -8.369289825026328,
+        "y": 467.3034308265604
+      },
+      "data": {
+        "videoUrl": "/uploads/1738165911296-267232651.mp4",
+        "label": "1738165911296-267232651.mp4"
+      },
+      "width": 302,
+      "height": 240,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -8.369289825026328,
+        "y": 467.3034308265604
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "videoNode-1738255966861",
+      "sourceHandle": null,
+      "target": "buttonNode-1738255814248",
+      "targetHandle": null,
+      "id": "evideoNode-1738255966861-buttonNode-1738255814248",
+      "animated": true
+    },
+    {
+      "source": "videoNode-1738255966861",
+      "sourceHandle": null,
+      "target": "buttonNode-1738255965522",
+      "targetHandle": null,
+      "id": "evideoNode-1738255966861-buttonNode-1738255965522",
+      "animated": true
+    },
+    {
+      "source": "buttonNode-1738255814248",
+      "sourceHandle": null,
+      "target": "videoNode-1738256349470",
+      "targetHandle": null,
+      "id": "ebuttonNode-1738255814248-videoNode-1738256349470",
+      "animated": true
+    },
+    {
+      "source": "buttonNode-1738255965522",
+      "sourceHandle": null,
+      "target": "videoNode-1738256375261",
+      "targetHandle": null,
+      "id": "ebuttonNode-1738255965522-videoNode-1738256375261",
+      "animated": true
+    }
+  ],
+  "version": "1.0",
+  "created": "2025-01-31T00:09:00.618Z"
+}

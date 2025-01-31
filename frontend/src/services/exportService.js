@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
-const API_URL = 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export async function exportProject(nodes, edges) {
   try {
@@ -71,49 +71,58 @@ export async function importProject(file) {
     console.log('Scénario chargé:', scenario);
 
     // Uploader les médias
-    const mediaFolder = content.folder('media');
-    if (mediaFolder) {
-      const mediaFiles = Object.keys(mediaFolder.files)
-        .filter(path => !path.endsWith('/'));
-      console.log('Médias trouvés:', mediaFiles);
+    const mediaFiles = Object.keys(content.files)
+      .filter(path => path.startsWith('media/') && !path.endsWith('/'));
+    console.log('Médias trouvés:', ['scenario.json', ...mediaFiles]);
 
-      for (const mediaPath of mediaFiles) {
-        try {
-          const mediaBlob = await content.file(mediaPath).async('blob');
-          const formData = new FormData();
-          const filename = mediaPath.split('/').pop();
-          formData.append('file', mediaBlob, filename);
+    // Upload scenario.json first
+    const scenarioBlob = new Blob([scenarioJson], { type: 'application/json' });
+    const scenarioFormData = new FormData();
+    scenarioFormData.append('file', scenarioBlob, 'scenario.json');
+    console.log('Upload du média: scenario.json');
+    await fetch(`${API_URL}/api/media/upload`, {
+      method: 'POST',
+      body: scenarioFormData,
+    });
 
-          console.log('Upload du média:', filename);
-          const response = await fetch(`${API_URL}/api/upload`, {
-            method: 'POST',
-            body: formData,
-          });
+    // Uploader chaque média
+    for (const mediaPath of mediaFiles) {
+      try {
+        const mediaBlob = await content.file(mediaPath).async('blob');
+        const formData = new FormData();
+        const filename = mediaPath.split('/').pop();
+        formData.append('file', mediaBlob, filename);
 
-          if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Erreur lors de l'upload de ${filename}: ${error}`);
-          }
+        console.log('Upload du média:', filename);
+        const response = await fetch(`${API_URL}/api/media/upload`, {
+          method: 'POST',
+          body: formData,
+        });
 
-          const { path } = await response.json();
-          console.log('Média uploadé avec succès:', path);
+        if (!response.ok) {
+          throw new Error(`Erreur lors de l'upload de ${filename}`);
+        }
 
-          // Mettre à jour les chemins dans le scénario
+        const result = await response.json();
+        console.log('Média uploadé avec succès:', result?.file?.path);
+
+        // Mettre à jour les chemins dans le scénario
+        if (result?.file?.path) {
           scenario.nodes = scenario.nodes.map(node => {
-            if (node.type === 'videoNode' && node.data.videoUrl.includes(mediaPath.split('/').pop())) {
+            if (node.type === 'videoNode' && node.data.videoUrl.includes(filename)) {
               return {
                 ...node,
                 data: {
                   ...node.data,
-                  videoUrl: path,
+                  videoUrl: result.file.path,
                 },
               };
             }
             return node;
           });
-        } catch (error) {
-          console.error(`Erreur lors de l'upload de ${mediaPath}:`, error);
         }
+      } catch (error) {
+        console.error(`Erreur lors de l'upload de ${mediaPath}:`, error);
       }
     }
 

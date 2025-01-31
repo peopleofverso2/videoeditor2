@@ -6,8 +6,12 @@ import {
   Button,
   Fade,
   IconButton,
+  Stack,
+  Tooltip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import ReactPlayer from 'react-player';
 
 const API_URL = 'http://localhost:4000';
@@ -40,6 +44,7 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
   const [nextNodes, setNextNodes] = useState([]);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showCloseButton, setShowCloseButton] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const playerRef = useRef(null);
   const playerContainerRef = useRef(null);
   const closeButtonTimeoutRef = useRef(null);
@@ -68,7 +73,6 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
     }
   }, [currentNode, videoEnded, edges, nodes]);
 
-  // Gérer les raccourcis clavier
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.key === ' ') {
@@ -81,18 +85,38 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
 
     if (open) {
       window.addEventListener('keydown', handleKeyPress);
-      document.documentElement.requestFullscreen();
     }
 
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
     };
   }, [open, onClose]);
 
-  // Gérer l'affichage du bouton de fermeture
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullScreen = async (event) => {
+    event.stopPropagation(); // Empêcher la propagation de l'événement
+    
+    try {
+      if (!document.fullscreenElement && playerContainerRef.current) {
+        await playerContainerRef.current.requestFullscreen();
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Erreur lors du changement de mode plein écran:', error);
+    }
+  };
+
   useEffect(() => {
     const handleMouseMove = () => {
       setShowCloseButton(true);
@@ -194,7 +218,7 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
         ref={playerContainerRef}
         sx={{ 
           position: 'relative',
-          height: '100vh',
+          height: isFullscreen ? '100vh' : '80vh',
           width: '100vw',
           bgcolor: 'black',
           overflow: 'hidden',
@@ -202,30 +226,50 @@ export default function PreviewModal({ open, onClose, nodes, edges }) {
         role="presentation"
         tabIndex={-1}
       >
-        <Fade in={showCloseButton}>
-          <IconButton
-            onClick={onClose}
-            sx={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              zIndex: 2,
-              color: 'white',
-              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-              backdropFilter: 'blur(4px)',
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              },
-              padding: '8px',
-              transition: 'all 0.2s ease-in-out',
-              opacity: showCloseButton ? 0.7 : 0,
-            }}
-            aria-label="Fermer la vidéo"
-            tabIndex={0}
-          >
-            <CloseIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Fade>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 1,
+          }}
+        >
+          <Tooltip title={isFullscreen ? "Quitter le plein écran" : "Plein écran"}>
+            <IconButton
+              onClick={toggleFullScreen}
+              sx={{ color: 'white' }}
+              aria-label={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+            >
+              {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+            </IconButton>
+          </Tooltip>
+          <Fade in={showCloseButton}>
+            <IconButton
+              onClick={onClose}
+              sx={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                zIndex: 2,
+                color: 'white',
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                backdropFilter: 'blur(4px)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                },
+                padding: '8px',
+                transition: 'all 0.2s ease-in-out',
+                opacity: showCloseButton ? 0.7 : 0,
+              }}
+              aria-label="Fermer la vidéo"
+              tabIndex={0}
+            >
+              <CloseIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Fade>
+        </Stack>
 
         <DialogContent
           sx={{

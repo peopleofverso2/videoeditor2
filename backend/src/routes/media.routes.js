@@ -1,165 +1,228 @@
 import express from 'express';
-import { promises as fs } from 'fs';
+import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import multer from 'multer';
+import archiver from 'archiver';
+import extract from 'extract-zip';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const router = express.Router();
 
-const VIDEOS_DIR = path.join(__dirname, '../../uploads');
-const DATA_DIR = path.join(__dirname, '../../data');
-const METADATA_FILE = path.join(DATA_DIR, 'metadata.json');
+// Test route
+router.get('/test', (req, res) => {
+  console.log('Test route hit');
+  res.json({ message: 'Media routes are working' });
+});
 
-// Configure multer for video upload
+// Test route avec paramètre
+router.get('/test/:param', (req, res) => {
+  res.json({ message: 'Parameter route working', param: req.params.param });
+});
+
+// Configuration de multer pour le stockage des fichiers
 const storage = multer.diskStorage({
-  destination: async function (req, file, cb) {
-    try {
-      await fs.mkdir(VIDEOS_DIR, { recursive: true });
-      cb(null, VIDEOS_DIR);
-    } catch (error) {
-      cb(error);
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    // Generate unique filename with timestamp
-    const timestamp = Date.now();
-    const extension = path.extname(file.originalname);
-    cb(null, `${timestamp}-${Math.floor(Math.random() * 100000000)}${extension}`);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    // Accept only video files
-    if (file.mimetype.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only video files are allowed'));
-    }
-  },
-  limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB limit
-  }
+const upload = multer({ storage: storage });
+
+// Middleware pour parser le JSON
+router.use(express.json());
+
+// Stockage des tags en mémoire (à remplacer par une base de données dans une version future)
+const videoTags = new Map();
+
+// Middleware de logging pour les routes media
+router.use((req, res, next) => {
+  console.log('\n=== Media Route Accessed ===');
+  console.log('Method:', req.method);
+  console.log('Path:', req.path);
+  console.log('Body:', req.body);
+  console.log('Params:', req.params);
+  console.log('=========================\n');
+  next();
 });
 
-// Default metadata
-const defaultMetadata = {
-  availableTags: ['À valider', 'Montage terminé', 'En cours', 'À revoir'],
-  videos: {}
-};
-
-// Upload video endpoint
-router.post('/upload', upload.single('video'), async (req, res) => {
+// Route pour les tags (AVANT les autres routes avec des paramètres)
+router.put('/:filename/tags', (req, res) => {
   try {
-    if (!req.file) {
-      throw new Error('No file uploaded');
-    }
-
-    const stats = await fs.stat(req.file.path);
-    const videoInfo = {
-      name: req.file.filename,
-      path: `/uploads/${req.file.filename}`,
-      size: stats.size,
-      modifiedAt: stats.mtime
-    };
-
-    res.json(videoInfo);
-  } catch (error) {
-    console.error('Error uploading video:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// Get list of videos
-router.get('/list', async (req, res) => {
-  try {
-    // Get list of files
-    const files = await fs.readdir(VIDEOS_DIR);
+    console.log('\n=== PUT Tags Route ===');
+    const filename = req.params.filename;
+    const { tags } = req.body;
     
-    // Filter and process MP4 files
-    const videos = [];
-    for (const file of files) {
-      if (file.endsWith('.mp4')) {
-        const stats = await fs.stat(path.join(VIDEOS_DIR, file));
-        videos.push({
+    const filepath = path.join(__dirname, '../../uploads', filename);
+    console.log('Filepath:', filepath);
+    console.log('File exists:', fs.existsSync(filepath));
+
+    if (!fs.existsSync(filepath)) {
+      console.log('File not found:', filepath);
+      return res.status(404).json({ error: 'Fichier non trouvé' });
+    }
+
+    if (!Array.isArray(tags)) {
+      console.log('Invalid tags format:', tags);
+      return res.status(400).json({ error: 'Les tags doivent être un tableau' });
+    }
+
+    videoTags.set(filename, tags);
+    console.log('Tags updated:', videoTags.get(filename));
+    res.json({ tags: videoTags.get(filename) });
+  } catch (error) {
+    console.error('Error in PUT /tags:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des tags' });
+  }
+});
+
+// Route pour récupérer les tags
+router.get('/:filename/tags', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filepath = path.join(__dirname, '../../uploads', filename);
+    
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Fichier non trouvé' });
+    }
+
+    const tags = videoTags.get(filename) || [];
+    res.json({ tags });
+  } catch (error) {
+    console.error('Error in GET /tags:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des tags' });
+  }
+});
+
+// Liste tous les fichiers
+router.get('/list', (req, res) => {
+  try {
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const files = fs.readdirSync(uploadsDir)
+      .filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return ['.mp4', '.webm', '.mov', '.avi'].includes(ext);
+      })
+      .map(file => {
+        const stats = fs.statSync(path.join(uploadsDir, file));
+        return {
           name: file,
           path: `/uploads/${file}`,
           size: stats.size,
-          modifiedAt: stats.mtime
-        });
+          modifiedAt: stats.mtime,
+          tags: videoTags.get(file) || []
+        };
+      });
+
+    res.json(files);
+  } catch (error) {
+    console.error('Erreur lors de la lecture des fichiers:', error);
+    res.status(500).json({ error: 'Erreur lors de la lecture des fichiers' });
+  }
+});
+
+// Upload un fichier
+router.post('/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier n\'a été uploadé' });
+    }
+
+    // Initialiser les tags pour ce fichier
+    videoTags.set(req.file.filename, []);
+
+    res.json({
+      file: {
+        name: req.file.filename,
+        path: `/uploads/${req.file.filename}`,
+        size: req.file.size,
+        modifiedAt: new Date(),
+        tags: []
       }
-    }
-    
-    // Sort videos by modification date (newest first)
-    videos.sort((a, b) => b.modifiedAt - a.modifiedAt);
-    
-    res.json(videos);
+    });
   } catch (error) {
-    console.error('Error listing videos:', error);
-    res.json([]);
+    console.error('Erreur lors de l\'upload:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'upload' });
   }
 });
 
-// Get video metadata
-router.get('/:filename', async (req, res) => {
+// Supprimer un fichier
+router.delete('/:filename', (req, res) => {
   try {
-    // Read metadata file
-    let metadata;
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      const data = await fs.readFile(METADATA_FILE, 'utf8');
-      metadata = JSON.parse(data);
-    } catch (err) {
-      metadata = defaultMetadata;
-      await fs.writeFile(METADATA_FILE, JSON.stringify(metadata, null, 2));
+    const filename = req.params.filename;
+    const filepath = path.join(__dirname, '../../uploads', filename);
+
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Fichier non trouvé' });
     }
-    
-    // Get video metadata or return default
-    const videoMeta = metadata.videos[req.params.filename] || {
-      tags: ['À valider'],
-      description: ''
-    };
-    
-    res.json(videoMeta);
+
+    fs.unlinkSync(filepath);
+    videoTags.delete(filename);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Error getting metadata:', error);
-    res.json({ tags: ['À valider'], description: '' });
+    console.error('Erreur lors de la suppression:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression' });
   }
 });
 
-// Update video metadata
-router.patch('/:filename', async (req, res) => {
+// Export des médias
+router.get('/export', async (req, res) => {
   try {
-    const { tags, description } = req.body;
-    
-    // Read current metadata
-    let metadata;
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      const data = await fs.readFile(METADATA_FILE, 'utf8');
-      metadata = JSON.parse(data);
-    } catch (err) {
-      metadata = defaultMetadata;
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    res.attachment('media-export.zip');
+    archive.pipe(res);
+
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    const files = fs.readdirSync(uploadsDir);
+
+    // Ajouter les fichiers à l'archive
+    for (const file of files) {
+      const filePath = path.join(uploadsDir, file);
+      archive.file(filePath, { name: `media/${file}` });
     }
-    
-    // Update video metadata
-    metadata.videos[req.params.filename] = {
-      tags: tags || ['À valider'],
-      description: description || ''
-    };
-    
-    // Save metadata
-    await fs.writeFile(METADATA_FILE, JSON.stringify(metadata, null, 2));
-    
-    res.json(metadata.videos[req.params.filename]);
+
+    await archive.finalize();
   } catch (error) {
-    console.error('Error updating metadata:', error);
-    res.status(500).json({ error: 'Failed to update metadata' });
+    console.error('Erreur lors de l\'export:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'export' });
+  }
+});
+
+// Import des médias
+router.post('/import', upload.single('archive'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier n\'a été uploadé' });
+    }
+
+    const archivePath = req.file.path;
+    const extractPath = path.join(__dirname, '../../uploads');
+
+    await extract(archivePath, { dir: extractPath });
+    fs.unlinkSync(archivePath);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur lors de l\'import:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'import' });
   }
 });
 

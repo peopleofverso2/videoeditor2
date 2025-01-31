@@ -1,16 +1,33 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const ProjectSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  createdBy: { type: String, required: true },
-  collaborators: [String],
-  scenes: [{
+const projectSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Scene'
+    ref: 'User'
+  },
+  collaborators: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  nodes: [{
+    type: Object
+  }],
+  edges: [{
+    type: Object
+  }]
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Project', ProjectSchema);
+const Project = mongoose.model('Project', projectSchema);
+
+export default Project;

@@ -1,33 +1,36 @@
-import React, { useRef } from 'react';
-import { 
-  AppBar, 
-  Toolbar as MuiToolbar, 
-  IconButton, 
-  Typography,
-  Box,
+import React from 'react';
+import {
+  AppBar,
+  Toolbar as MuiToolbar,
+  IconButton,
   Button,
-  Tooltip
+  Box,
+  Tooltip,
+  Typography
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
   Save as SaveIcon,
+  Upload as UploadIcon,
   Undo as UndoIcon,
   Redo as RedoIcon,
-  Upload as UploadIcon,
+  FolderOpen as FolderIcon,
   VideoLibrary as VideoLibraryIcon,
   SmartButton as ButtonIcon
 } from '@mui/icons-material';
 
-export default function Toolbar({ 
-  onSave, 
-  onImport, 
+const Toolbar = ({
+  onSave,
+  onImport,
   onPlay,
   onUndo,
   onRedo,
+  onOpenProjects,
   canUndo,
-  canRedo
-}) {
-  const fileInputRef = useRef();
+  canRedo,
+  projectId
+}) => {
+  const fileInputRef = React.createRef();
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -43,98 +46,110 @@ export default function Toolbar({
   };
 
   return (
-    <AppBar position="static" color="default" elevation={1}>
-      <MuiToolbar>
-        <Typography variant="h6" component="div" sx={{ mr: 2 }}>
-          Video Editor
-        </Typography>
+    <AppBar position="static" color="default">
+      <MuiToolbar variant="dense">
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <Tooltip title="Ouvrir les projets">
+            <IconButton onClick={onOpenProjects} size="large">
+              <FolderIcon />
+            </IconButton>
+          </Tooltip>
 
-        <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
-          {/* Éléments glissables */}
-          <Button
-            variant="outlined"
-            startIcon={<VideoLibraryIcon />}
-            draggable
-            onDragStart={(e) => handleDragStart(e, 'videoNode')}
-          >
-            Vidéo
-          </Button>
+          <Typography variant="subtitle1" sx={{ ml: 2, flexGrow: 1 }}>
+            {projectId ? 'Projet en cours' : 'Aucun projet sélectionné'}
+          </Typography>
 
-          <Button
-            variant="outlined"
-            startIcon={<ButtonIcon />}
-            draggable
-            onDragStart={(e) => handleDragStart(e, 'buttonNode')}
-          >
-            Bouton
-          </Button>
-        </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="Annuler">
+              <span>
+                <IconButton
+                  onClick={onUndo}
+                  disabled={!canUndo || !projectId}
+                >
+                  <UndoIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
 
-        {/* Actions */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Annuler">
-            <span>
-              <IconButton 
-                onClick={onUndo} 
-                disabled={!canUndo}
-                size="large"
+            <Tooltip title="Rétablir">
+              <span>
+                <IconButton
+                  onClick={onRedo}
+                  disabled={!canRedo || !projectId}
+                >
+                  <RedoIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+
+            <Tooltip title="Sauvegarder">
+              <span>
+                <IconButton
+                  onClick={onSave}
+                  disabled={!projectId}
+                >
+                  <SaveIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+
+            <Tooltip title="Importer">
+              <span>
+                <IconButton
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!projectId}
+                >
+                  <UploadIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+
+            <Tooltip title="Lancer la prévisualisation">
+              <span>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={onPlay}
+                  disabled={!projectId}
+                  startIcon={<PlayIcon />}
+                >
+                  Prévisualiser
+                </Button>
+              </span>
+            </Tooltip>
+
+            <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+              {/* Éléments glissables */}
+              <Button
+                variant="outlined"
+                startIcon={<VideoLibraryIcon />}
+                draggable
+                onDragStart={(e) => handleDragStart(e, 'videoNode')}
               >
-                <UndoIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+                Vidéo
+              </Button>
 
-          <Tooltip title="Rétablir">
-            <span>
-              <IconButton 
-                onClick={onRedo} 
-                disabled={!canRedo}
-                size="large"
+              <Button
+                variant="outlined"
+                startIcon={<ButtonIcon />}
+                draggable
+                onDragStart={(e) => handleDragStart(e, 'buttonNode')}
               >
-                <RedoIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Sauvegarder">
-            <IconButton 
-              onClick={onSave}
-              color="primary"
-              size="large"
-            >
-              <SaveIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Importer">
-            <IconButton
-              onClick={() => fileInputRef.current?.click()}
-              color="primary"
-              size="large"
-            >
-              <UploadIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Lancer">
-            <IconButton
-              onClick={onPlay}
-              color="primary"
-              size="large"
-            >
-              <PlayIcon />
-            </IconButton>
-          </Tooltip>
+                Bouton
+              </Button>
+            </Box>
+          </Box>
         </Box>
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept=".pov"
-          style={{ display: 'none' }}
-        />
       </MuiToolbar>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pov"
+        style={{ display: 'none' }}
+      />
     </AppBar>
   );
-}
+};
+
+export default Toolbar;

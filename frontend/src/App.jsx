@@ -1,9 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { ThemeProvider, CssBaseline, Box } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box, IconButton, Drawer } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
+import { Group as GroupIcon } from '@mui/icons-material';
 import NodeEditor from './components/NodeEditor/NodeEditor';
 import Toolbar from './components/Toolbar/Toolbar';
 import PreviewModal from './components/Preview/PreviewModal';
+import MembersManager from './components/Collaboration/MembersManager';
+import ProjectSelector from './components/Project/ProjectSelector';
 import { useNodesState, useEdgesState } from 'reactflow';
 import { exportProject, importProject } from './services/exportService';
 
@@ -23,9 +26,10 @@ const theme = createTheme({
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [openMembers, setOpenMembers] = useState(false);
+  const [openProjects, setOpenProjects] = useState(false);
+  const [currentProjectId, setCurrentProjectId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  
-  // Historique pour undo/redo
   const [history, setHistory] = useState({
     past: [],
     present: { nodes, edges },
@@ -116,16 +120,18 @@ export default function App() {
     setPreviewOpen(true);
   }, [setPreviewOpen]);
 
+  const handleProjectSelect = (projectId) => {
+    setCurrentProjectId(projectId);
+    setOpenProjects(false);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ 
-        height: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column',
-        bgcolor: 'background.default' 
-      }}>
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Toolbar
+          onOpenProjects={() => setOpenProjects(true)}
+          projectId={currentProjectId}
           onSave={handleSave}
           onImport={handleImport}
           onPlay={handlePlay}
@@ -134,7 +140,7 @@ export default function App() {
           canUndo={history.past.length > 0}
           canRedo={history.future.length > 0}
         />
-        
+
         <Box sx={{ flexGrow: 1 }}>
           <NodeEditor
             nodes={nodes}
@@ -152,6 +158,64 @@ export default function App() {
           nodes={nodes}
           edges={edges}
         />
+
+        {/* Drawer des projets */}
+        <Drawer
+          anchor="left"
+          open={openProjects}
+          onClose={() => setOpenProjects(false)}
+          PaperProps={{
+            sx: {
+              width: { xs: '100%', sm: 400 },
+              maxWidth: '100%',
+              p: 2
+            }
+          }}
+        >
+          <ProjectSelector
+            currentProjectId={currentProjectId}
+            onProjectSelect={handleProjectSelect}
+          />
+        </Drawer>
+
+        {/* Drawer des membres */}
+        <Drawer
+          anchor="right"
+          open={openMembers}
+          onClose={() => setOpenMembers(false)}
+          PaperProps={{
+            sx: {
+              width: { xs: '100%', sm: 400 },
+              maxWidth: '100%'
+            }
+          }}
+        >
+          {currentProjectId && (
+            <MembersManager 
+              projectId={currentProjectId}
+              onClose={() => setOpenMembers(false)}
+            />
+          )}
+        </Drawer>
+
+        {/* Bouton de gestion des membres */}
+        {currentProjectId && (
+          <Box sx={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1000 }}>
+            <IconButton
+              color="primary"
+              onClick={() => setOpenMembers(true)}
+              sx={{
+                backgroundColor: 'white',
+                boxShadow: 2,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                }
+              }}
+            >
+              <GroupIcon />
+            </IconButton>
+          </Box>
+        )}
       </Box>
     </ThemeProvider>
   );

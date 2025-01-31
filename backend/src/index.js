@@ -1,40 +1,52 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const { Server } = require('socket.io');
-const http = require('http');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
+import fs from 'fs';
+import mongoose from 'mongoose';
+import mediaRoutes from './routes/media.routes.js';
+import projectRoutes from './routes/projects.js';
 
-// Import des contrôleurs
-const scenarioController = require('./controllers/scenario.controller');
-const mediaController = require('./controllers/media.controller');
-
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3014',
-    methods: ['GET', 'POST']
-  }
+
+// Middleware de logging
+app.use((req, res, next) => {
+  console.log('\n=== Incoming Request ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.originalUrl);
+  console.log('Body:', req.body);
+  console.log('======================\n');
+  next();
 });
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3014',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Accept'],
-  credentials: true
-}));
-app.use(express.json());
+// CORS middleware
+app.use(cors());
 
-// Servir les fichiers uploadés
+// JSON parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configure uploads directory
 const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 app.use('/uploads', express.static(uploadsDir));
 
-// MongoDB connection
+// Mount routes
+app.use('/api/media', mediaRoutes);
+app.use('/api/projects', projectRoutes);
+
+// Test route
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is working' });
+});
+
+// Connexion à MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/video-editor', {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -45,52 +57,26 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/video-edi
   process.exit(1);
 });
 
-// Routes API
-app.use('/api/scenarios', scenarioController);
-app.use('/api/media', mediaController);
-
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  socket.on('join-project', (projectId) => {
-    socket.join(projectId);
-    console.log(`User ${socket.id} joined project ${projectId}`);
-  });
-
-  socket.on('update-node', (data) => {
-    socket.to(data.projectId).emit('node-updated', data);
-  });
-
-  socket.on('update-transition', (data) => {
-    socket.to(data.projectId).emit('transition-updated', data);
-  });
-
-  socket.on('add-choice', (data) => {
-    socket.to(data.projectId).emit('choice-added', data);
-  });
-
-  socket.on('delete-choice', (data) => {
-    socket.to(data.projectId).emit('choice-deleted', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: 'Une erreur est survenue',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  console.error('Error:', err);
+  res.status(500).json({ error: err.message });
+});
+
+// 404 handler
+app.use((req, res) => {
+  console.log('404 Not Found:', req.method, req.originalUrl);
+  res.status(404).json({
+    error: 'Route not found',
+    method: req.method,
+    url: req.originalUrl
   });
 });
 
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API available at http://localhost:${PORT}/api`);
-  console.log(`Uploads available at http://localhost:${PORT}/uploads`);
+const PORT = 4000;
+app.listen(PORT, () => {
+  console.log(`\n=== Server Started ===`);
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Uploads directory: ${uploadsDir}`);
+  console.log(`===================\n`);
 });
